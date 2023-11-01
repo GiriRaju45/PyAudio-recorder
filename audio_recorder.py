@@ -38,15 +38,15 @@ class AudioRecorder:
             if self.selected_device is not None:
                 self.stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, input_device_index=self.selected_device, frames_per_buffer=CHUNK)
                 self.is_recording = True
-                while self.is_recording:
-                    print('Recording Started..')
-                    try:
+                print('Recording Started..')
+                try:
+                    while self.is_recording:
                         data = self.stream.read(CHUNK)
                         self.frames.append(data)
-                    except:
-                        KeyboardInterrupt 
-                        print('Keyboard interruption')
-                        return 
+                except:
+                    KeyboardInterrupt 
+                    print('Keyboard interruption')
+                    return 
     def stop_recording(self):
         if self.is_recording:
             self.is_recording = False
