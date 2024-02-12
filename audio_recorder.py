@@ -2,15 +2,23 @@ import pyaudio
 import wave
 import sys
 import pandas as pd
+from pydub import AudioSegment
+from detect_silence import trim_silence
+import numpy as np
+
+
 # from playsound import playsound
 
 # Constants for audio recording
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 48000
+
 CHUNK = 1024
 # record_seconds = 10
+SAMPLE_WIDTH = pyaudio.get_sample_size(pyaudio.paInt16)
 
+print(SAMPLE_WIDTH)
 
 class AudioRecorder:
     def __init__(self):
@@ -48,6 +56,7 @@ class AudioRecorder:
             if self.selected_device is not None:
                 self.stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, input_device_index=self.selected_device, frames_per_buffer=CHUNK)
                 self.is_recording = True
+                print('The audio is being recorded from the input device: ', self.audio.get_device_info_by_index(self.selected_device)['name'])
                 print(f'SENTENCE: {self.sentence}')
                 print(f'ID: {self.id}')
                 print('Recording Started..')
@@ -72,17 +81,29 @@ class AudioRecorder:
             print("No audio to save.")
             return
         filename = self.id
+        print(len(self.frames))
+        buffer = b''.join(self.frames)
+        audio_segment = AudioSegment(
+        buffer,
+        sample_width=SAMPLE_WIDTH,
+        channels=CHANNELS,
+        frame_rate=RATE)
+        #audio_segment.export('non-silenced.wav', format = 'wav')
+        trimmed_wav, duration = trim_silence(audio_segment)
+        #trimmed_wav.export('silenced.wav', format = 'wav')
         print(f'The recorded audio is saved in the filename: {self.id}')
         if not filename:
             print("Please enter a valid filename.")
             return
-
+        # self.seg_data = AudioSegment(self.frames, frame_rate = 44100)
+        # self.sil_aud = 
         output_filename = f"{filename}.wav"
-        with wave.open(output_filename, 'wb') as wf:
-            wf.setnchannels(CHANNELS)
-            wf.setsampwidth(self.audio.get_sample_size(FORMAT))
-            wf.setframerate(RATE)
-            wf.writeframes(b''.join(self.frames))
+        # with wave.open(output_filename, 'wb') as wf:
+        #     wf.setnchannels(CHANNELS)
+        #     wf.setsampwidth(self.audio.get_sample_size(FORMAT))
+        #     wf.setframerate(RATE)
+        #     wf.writeframes(b''.join(self.frames))
+        trimmed_wav.export(output_filename, format= 'wav')
         print(f"Audio saved as {output_filename}")
         print(f'Sample rate of the audio: ')
         self.frames = []
@@ -101,13 +122,13 @@ class AudioRecorder:
 
         if not self.frames:
             print('No audio to play..')
-        
          # Open an output stream
-        playback_stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True)
-
+        playback_stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True, input_device_index= self.selected_device)
         try:
             # Write the recorded frames to the playback stream
+
             for data in self.frames:
+                print(data)
                 playback_stream.write(data)
         except KeyboardInterrupt:
             print('Keyboard interruption during playback')
@@ -116,6 +137,23 @@ class AudioRecorder:
             playback_stream.stop_stream()
             playback_stream.close()
         
+    # def detect_leading_silence(sound, silence_threshold=-60.0, chunk_size=1):
+    # '''
+    # sound is a pydub.AudioSegment
+    # silence_threshold in dBFS
+    # chunk_size in ms
+
+    # iterate over chunks until you find the first one with sound
+    # '''
+    # #sound = AudioSegment.from_file(filepath, format="wav")
+
+    # trim_ms = 0 # ms
+
+    # assert chunk_size > 0 # to avoid infinite loop
+    # while sound[trim_ms:trim_ms+chunk_size].dBFS < silence_threshold and trim_ms < len(sound):
+    #     trim_ms += chunk_size
+
+    # return trim_ms
 
 if __name__ == "__main__":
     recorder = AudioRecorder()
