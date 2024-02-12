@@ -3,7 +3,7 @@ import wave
 import sys
 import pandas as pd
 from pydub import AudioSegment
-from detect_silence import trim_silence
+from utils.detect_silence import trim_silence
 import numpy as np
 
 
@@ -126,7 +126,6 @@ class AudioRecorder:
         playback_stream = self.audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, output=True, input_device_index= self.selected_device)
         try:
             # Write the recorded frames to the playback stream
-
             for data in self.frames:
                 print(data)
                 playback_stream.write(data)
@@ -137,23 +136,7 @@ class AudioRecorder:
             playback_stream.stop_stream()
             playback_stream.close()
         
-    # def detect_leading_silence(sound, silence_threshold=-60.0, chunk_size=1):
-    # '''
-    # sound is a pydub.AudioSegment
-    # silence_threshold in dBFS
-    # chunk_size in ms
-
-    # iterate over chunks until you find the first one with sound
-    # '''
-    # #sound = AudioSegment.from_file(filepath, format="wav")
-
-    # trim_ms = 0 # ms
-
-    # assert chunk_size > 0 # to avoid infinite loop
-    # while sound[trim_ms:trim_ms+chunk_size].dBFS < silence_threshold and trim_ms < len(sound):
-    #     trim_ms += chunk_size
-
-    # return trim_ms
+    
 
 if __name__ == "__main__":
     recorder = AudioRecorder()
