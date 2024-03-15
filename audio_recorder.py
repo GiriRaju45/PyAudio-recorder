@@ -137,38 +137,7 @@ class AudioRecorder:
             playback_stream.stop_stream()
             playback_stream.close()
         
-<<<<<<< HEAD
-    def goto_previous(self):
-        if self.start_id == 0:
-            print('No previous ID! This is the first value')
-        else:
-            self.prev_index = self.start_id - 1
-            print(self.prev_index)
-            self.prev = self.df.ID.iloc[int(self.prev_index)]
-            print(self.prev)
-            print(self.df.text.iloc[self.prev_index])
-            
-
-
-=======
-    # def detect_leading_silence(sound, silence_threshold=-60.0, chunk_size=1):
-    # '''
-    # sound is a pydub.AudioSegment
-    # silence_threshold in dBFS
-    # chunk_size in ms
-
-    # iterate over chunks until you find the first one with sound
-    # '''
-    # #sound = AudioSegment.from_file(filepath, format="wav")
-
-    # trim_ms = 0 # ms
-
-    # assert chunk_size > 0 # to avoid infinite loop
-    # while sound[trim_ms:trim_ms+chunk_size].dBFS < silence_threshold and trim_ms < len(sound):
-    #     trim_ms += chunk_size
-
-    # return trim_ms
->>>>>>> parent of 13d5516 (added detect_silence.py under a new folder utils which can be used to detect and trim silence from the recorded audio and updated audio_recorder.py)
+    
 
 if __name__ == "__main__":
     recorder = AudioRecorder()
