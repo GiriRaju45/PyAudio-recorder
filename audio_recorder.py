@@ -136,7 +136,18 @@ class AudioRecorder:
             playback_stream.stop_stream()
             playback_stream.close()
         
-    
+    def goto_previous(self):
+        if self.start_id == 0:
+            print('No previous ID! This is the first value')
+        else:
+            self.prev_index = self.start_id - 1
+            print(self.prev_index)
+            self.prev = self.df.ID.iloc[int(self.prev_index)]
+            print(self.prev)
+            print(self.df.text.iloc[self.prev_index])
+            
+
+
 
 if __name__ == "__main__":
     recorder = AudioRecorder()
@@ -150,7 +161,8 @@ if __name__ == "__main__":
         print("2. Stop Recording")
         print("3. Save Recording")
         print("4. playback the recorded audio")
-        print("5. Exit")
+        print("5. go to previous")
+        print("6. Exit")
         choice = input("Select an option: ")
 
         if choice == '1':
@@ -161,8 +173,10 @@ if __name__ == "__main__":
             recorder.save_audio()
         elif choice == '4':
             recorder.playback_audio()
-        elif choice == '5':
+        elif choice == '6':
             break
+        elif choice == '5':
+            recorder.goto_previous()
         else:
             print("Invalid choice. Please select a valid option.")
 

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Recorder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .container {
+            text-align: center;
+        }
+        button {
+            margin: 10px;
+            padding: 15px 30px;
+            font-size: 18px;
+            border: none;
+            cursor: pointer;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Recorder</h1>
+        <form action="/start_recording" method="post">
+            <button type="submit">&#9654; Start Recording</button>
+        </form>
+        <form action="/stop_recording" method="post">
+            <button type="submit">&#9724; Stop Recording</button>
+        </form>
+        <form action="/save_audio" method="post">
+            <button type="submit">Save Audio &#128190;</button>
+        </form>
+        <form action="/playback_audio" method="post">
+            <button type="submit">&#9658; Playback Audio</button>
+        </form>
+        <form action="/goto_previous" method="post">
+            <button type="submit">&#8678; Go to Previous</button>
+        </form>
+    </div>
+</body>
+</html>
