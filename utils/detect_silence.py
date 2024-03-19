@@ -18,11 +18,11 @@ def detect_leading_silence(sound, silence_threshold=-60.0, chunk_size=1):
 
     return trim_ms
 
-<<<<<<< HEAD
-sound = AudioSegment.from_file("TA_F_35000.wav", format="wav")
-=======
+# <<<<<<< HEAD
 # sound = AudioSegment.from_file("TA_F_35000.wav", format="wav")
->>>>>>> 18752d9eae9ba055b5ef63978a39734a16f88499
+# =======
+# # sound = AudioSegment.from_file("TA_F_35000.wav", format="wav")
+# >>>>>>> 18752d9eae9ba055b5ef63978a39734a16f88499
 
 def trim_silence(sound):
                  
