@@ -8,7 +8,9 @@ import pyaudio
 import tkinter.filedialog as fd
 import shutil
 import os
+import requests
 import threading
+import json
 from tkinter import messagebox
 from pydub import AudioSegment
 from PIL import Image, ImageTk
@@ -74,7 +76,7 @@ class AudioRecorder:
             frame_rate=self.rate           
         ) 
         trimmed_wav, duration = trim_silence(audio_segment)
-        output_filename = os.path.join(self.audio_dir, f"{filename}")
+        output_filename = os.path.join(self.audio_dir, filename)
         trimmed_wav.export(output_filename, format='wav')
         self.frames = []
 
@@ -144,8 +146,8 @@ class AudioRecorderApp:
         language = self.language_var.get()
         style =self.style_var.get()
         speaker = self.speaker_var.get()
-        current_date = self.my_date.entry.get()
-        self.audio_dir = os.path.join(base_dir,language,speaker,style,current_date)
+        self.current_date = self.my_date.entry.get()
+        self.audio_dir = os.path.join(base_dir,language,speaker,style,self.current_date)
         os.makedirs(self.audio_dir, exist_ok=True)
         
     def on_submit(self):
@@ -252,6 +254,7 @@ class AudioRecorderApp:
         filename = os.path.basename(filepath)
         self.target_path = os.path.join(target_folder, filename)
         shutil.copy(filepath, self.target_path)
+
         print(f"File saved to {self.target_path}")
         
     def load_csv(self):
@@ -296,6 +299,27 @@ class AudioRecorderApp:
         sentence = self.text_sentence.get("1.0", "end-1c")
         filename = f"{id}.wav" 
         self.audio_recorder.save_recording(filename, self.audio_dir)
+        file_path = os.path.join(self.audio_dir, filename)
+        print("$$$$$$$$$$$$$$$$$$", file_path)
+        data = {
+            "easy_id": self.current_date,
+            "Sentence": sentence,
+            "speaker": self.current_speaker,
+            "language": self.current_language,
+            "style": self.current_language,
+            "category": self.current_category,
+            "data_id": id
+        }
+        with open(file_path, 'rb') as audio_file:
+            files = {
+                'audio_file': (filename, audio_file, 'audio/wav')
+            }
+            response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
+            
+        if response.ok:
+            print("Successfully uplaoded the audio file and metadata.")
+        else:
+            print(f"Failed to upload hte audio file. Status code: {response.status_code}, Response: {response.text}")
 
     def previous_sentence(self):
         if self.current_index > 0:
