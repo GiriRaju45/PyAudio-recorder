@@ -18,3 +18,5 @@ ttkbootstrap==1.10.1
 types-python-dateutil==2.8.19.20240106
 urllib3==2.2.1
 Werkzeug==3.0.1
+
+# ttkbootstrap installation - python -m pip install ttkbootstrap
