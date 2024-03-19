@@ -88,7 +88,7 @@ class AudioRecorderApp:
         self.master.title('Audio Recorder App')
         self.audio_recorder = AudioRecorder()
         self.current_index = 0 # Keep track of the current sentence
-        self.data = pd.read_csv(r'C:\Users\richa\Downloads\TTS_DC\tkinter\demo_correct.csv') # Load your CSV data here
+        self.data = pd.read_csv(r'demo_correct.csv') # Load your CSV data here
         self.setup_menu()
         self.create_widgets()
         self.update_ui_with_sentence()  # Add this line to load the first sentence on startup
