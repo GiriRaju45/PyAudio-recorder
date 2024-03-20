@@ -55,6 +55,8 @@ class AudioRecorder:
         self.recording_thread_48000.start()
         self.recording_thread_8000.start()
         
+
+
     def _record_loop(self, stream, frames):
         while self.is_recording:
             try:
@@ -112,10 +114,10 @@ class AudioRecorderApp:
         self.master.title('Audio Recorder App')
         self.audio_recorder = AudioRecorder()
         self.current_index = 0 # Keep track of the current sentence
-        self.data = pd.read_csv(r'demo_correct.csv') # Load your CSV data here
+        self.data = None # Load your CSV data here
         self.setup_menu()
         self.create_widgets()
-        self.update_ui_with_sentence()  # Add this line to load the first sentence on startup
+        #self.update_ui_with_sentence()  # Add this line to load the first sentence on startup
     
     def setup_menu(self):
         # Create menu
@@ -224,7 +226,7 @@ class AudioRecorderApp:
         self.text_sentence = tk.Text(main_frame, height=4, width=50, wrap="word", font=bold_font, spacing3=22)
         self.text_sentence.tag_configure("center", justify='center')
         self.text_sentence.pack(pady=20, padx=10)  # Padding on sides for the Text widget
-        
+        self.text_sentence.insert("1.0", "Please use the load CSV option in the File menu to display the sentence.")
         style = ttk.Style()
 
         style.configure('danger.TButton', font=('Helvetica', 60), padding=30) # Modify font size and padding as needed
@@ -238,9 +240,11 @@ class AudioRecorderApp:
         # self.btn_play.pack(side=tk.LEFT, padx=32, pady=5)
 
         self.audio_var = tk.StringVar()
-        self.audiotype_dropdown = ttk.Combobox(self.master, values=audio_types)
-        self.audiotype_dropdown.pack(pady=20, padx=15)
-        self.audiotype_dropdown.set('Select audio format')
+        self.audiotype_dropdown = ttk.Combobox(self.master, values=audio_types, width= 35)
+        self.audiotype_dropdown.pack(pady=20, padx=15, side= LEFT)
+        self.audiotype_dropdown.place(x = 30, y = 350)
+        self.audiotype_dropdown.set('Select audio format to listen the recorded audio')
+
 
         self.plyback_btn = ttk.Button(buttons_frame, text= 'play selected format audio', command= self.playback_recorded_audio, style= 'my.TButton', bootstyle='secondary')
         self.plyback_btn.pack(side=tk.LEFT, padx=32, pady=5)
@@ -352,15 +356,20 @@ class AudioRecorderApp:
         p.terminate()
 
     def playback_recorded_audio(self):
-        if self.audiotype_dropdown.get() == '48khz':
+        #frames = []
+        #print(self.audiotype_dropdown.get())
+        if self.audiotype_dropdown.get().strip() == '48khz':
             frames = self.audio_recorder.frames_48000
             rate = 48000
-        elif self.audiotype_dropdown.get() == '8khz':
+        elif self.audiotype_dropdown.get().strip() == '8khz':
             frames = self.audio_recorder.frames_8000
             rate = 8000
-        if not frames:
-            messagebox.showerror('Error!!', 'No audio to play')
-        else:
+        elif self.audiotype_dropdown.get().strip() == 'Select audio format to listen the recorded audio' or self.audiotype_dropdown.get() not in ['48khz', '8khz']:
+            messagebox.showerror('Error!', 'Please select a valid audio format')
+        print(rate)
+        print(frames)
+        if True:
+            print(rate)
          # Open an output stream
             self.audio = pyaudio.PyAudio()
             playback_stream = self.audio.open(format=pyaudio.paInt16, channels=1, rate=rate, output=True, input_device_index= int(self.microphone_dropdown.get().split(' ')[1].replace(':', '')))
