@@ -118,7 +118,9 @@ class AudioRecorderApp:
         self.setup_menu()
         self.create_widgets()
         #self.update_ui_with_sentence()  # Add this line to load the first sentence on startup
-    
+        self.master.bind("<space>", self.btn_stop)
+        self.master.bind("<KeyPress-*>", self.btn_record)
+
     def setup_menu(self):
         # Create menu
         # Add a menu bar for CSV handling
@@ -193,6 +195,7 @@ class AudioRecorderApp:
             os.makedirs(self.audio_dir, exist_ok=True)
             print(self.audio_dir)
             messagebox.showinfo("Success", "Directory Created")
+            self.master.after(1000, lambda: messagebox._show("Success", "Directory Created"))
             
         
     def on_submit(self):
@@ -387,6 +390,9 @@ class AudioRecorderApp:
 
     def start_recording(self):
         index = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
+        messagebox.showinfo("Recording Started", "Recording has started.")
+        self.master.after(2000, lambda: messagebox._show("Recording Started", "Recording has started."))
+
         self.audio_recorder.start_recording(device_index=index)
 
     def stop_recording_or_playing(self):
