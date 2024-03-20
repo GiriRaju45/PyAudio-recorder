@@ -284,15 +284,15 @@ class AudioRecorderApp:
 
         # self.btn_play.pack(side=tk.LEFT, padx=32, pady=5)
 
-        self.audio_var = tk.StringVar()
-        self.audiotype_dropdown = ttk.Combobox(self.master, values=audio_types, width= 35)
-        self.audiotype_dropdown.pack(pady=20, padx=15, side= LEFT)
-        self.audiotype_dropdown.place(x = 30, y = 350)
-        self.audiotype_dropdown.set('Select audio format to listen the recorded audio')
+        # self.audio_var = tk.StringVar()
+        # self.audiotype_dropdown = ttk.Combobox(self.master, values=audio_types, width= 35)
+        # self.audiotype_dropdown.pack(pady=20, padx=15, side= LEFT)
+        # self.audiotype_dropdown.place(x = 30, y = 350)
+        # self.audiotype_dropdown.set('Select audio format to listen the recorded audio')
 
 
-        self.plyback_btn = ttk.Button(buttons_frame, text= 'play selected format audio', command= self.playback_recorded_audio, style= 'my.TButton', bootstyle='secondary')
-        self.plyback_btn.pack(side=tk.LEFT, padx=32, pady=5)
+        # self.plyback_btn = ttk.Button(buttons_frame, text= 'play selected format audio', command= self.playback_recorded_audio, style= 'my.TButton', bootstyle='secondary')
+        self.btn_play.pack(side=tk.LEFT, padx=32, pady=5)
         self.btn_stop.pack(side=tk.LEFT, padx=32, pady=5)
         self.btn_record.pack(side=tk.LEFT, padx=32, pady=5)
         self.btn_save.pack(side=tk.LEFT, padx=32, pady=5)
