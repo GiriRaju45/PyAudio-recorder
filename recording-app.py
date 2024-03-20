@@ -8,7 +8,9 @@ import pyaudio
 import tkinter.filedialog as fd
 import shutil
 import os
+import requests
 import threading
+import sys
 from tkinter import messagebox
 from pydub import AudioSegment
 from PIL import Image, ImageTk
@@ -112,15 +114,16 @@ class AudioRecorderApp:
     def __init__(self, master):
         self.master = master
         self.master.title('Audio Recorder App')
+        self.count = 0
+        self.duration = 0
         self.audio_recorder = AudioRecorder()
         self.current_index = 0 # Keep track of the current sentence
         self.data = None # Load your CSV data here
         self.setup_menu()
         self.create_widgets()
-        #self.update_ui_with_sentence()  # Add this line to load the first sentence on startup
-        self.master.bind("<space>", self.btn_stop)
-        self.master.bind("<KeyPress-*>", self.btn_record)
+        self.update_ui_with_sentence()  # Add this line to load the first sentence on startup
 
+    
     def setup_menu(self):
         # Create menu
         # Add a menu bar for CSV handling
@@ -186,12 +189,11 @@ class AudioRecorderApp:
         language = self.language_var.get()
         style =self.style_var.get()
         speaker = self.speaker_var.get()
-        current_date = self.my_date.entry.get().replace("/", "-")
-        print(current_date)
+        self.current_date = self.my_date.entry.get().replace("/", "-")
         if language == 'Select Language' or style == 'Select Style' or speaker == 'Select Speaker':
             messagebox.showerror("ERROR!!", "Please select a valid option.")
         else:
-            self.audio_dir = os.path.join(base_dir,language,speaker,style,current_date)
+            self.audio_dir = os.path.join(base_dir,language,speaker,style,self.current_date)
             os.makedirs(self.audio_dir, exist_ok=True)
             print(self.audio_dir)
             messagebox.showinfo("Success", "Directory Created")
@@ -221,58 +223,97 @@ class AudioRecorderApp:
         main_frame = ttk.Frame(self.master)
         main_frame.pack(expand=True)
         
+        self.audio_count = ttk.Label(main_frame, text=f"Audio Count: {self.count}", font=('Times New Roman', 18, 'bold'), width=24, bootstyle="success")
+        self.audio_count.pack(pady=(20,0))
+
+        self.audio_duration = ttk.Label(main_frame, text=f"Total Duration: {self.duration} minutes", font=('Times New Roman', 18, 'bold'), width=24, bootstyle="success")
+        self.audio_duration.pack(pady=(20,0))
+        
+        
         self.text_id = ttk.Entry(main_frame, font=('Times New Roman', 18, 'bold'), width=24, bootstyle="success")
         self.text_id.bind('<Return>', self.load_entry_from_id)
         self.text_id.pack(pady=(16, 0))  # Padding only at the top
 
         bold_font = ('Arial Unicode MS', 22)  # Using 'Arial Unicode MS' for better Unicode character support
-        self.text_sentence = tk.Text(main_frame, height=4, width=50, wrap="word", font=bold_font, spacing3=22)
+        self.text_sentence = tk.Text(main_frame, height=3, width=65, wrap="word", font=bold_font, spacing3=22)
         self.text_sentence.tag_configure("center", justify='center')
         self.text_sentence.pack(pady=20, padx=10)  # Padding on sides for the Text widget
         self.text_sentence.insert("1.0", "Please use the load CSV option in the File menu to display the sentence.")
         style = ttk.Style()
-
-        style.configure('danger.TButton', font=('Helvetica', 60), padding=30) # Modify font size and padding as needed
+        style.configure('NoBorder.TButton', borderwidth=0, highlightthickness=0)
+        # style.configure('danger.TButton', font=('Helvetica', 60), padding=30) # Modify font size and padding as needed
+        
 
         # Frame for buttons
         buttons_frame = ttk.Frame(main_frame)
         buttons_frame.pack(pady=0)
-
+        
         # self.btn_play = ttk.Button(buttons_frame, text="▶️", command=self.play_audio, style='danger.TButton', bootstyle='success')
-        # self.btn_play = ttk.Button(buttons_frame, text="PLAY", command=self.play_audio, style='success.TButton, bold', bootstyle='success')
+        # # self.btn_play = ttk.Button(buttons_frame, text="PLAY", command=self.play_audio, style='success.TButton, bold', bootstyle='success')
         # self.btn_play.pack(side=tk.LEFT, padx=32, pady=5)
 
-        self.audio_var = tk.StringVar()
-        self.audiotype_dropdown = ttk.Combobox(self.master, values=audio_types, width= 35)
-        self.audiotype_dropdown.pack(pady=20, padx=15, side= LEFT)
-        self.audiotype_dropdown.place(x = 30, y = 350)
-        self.audiotype_dropdown.set('Select audio format to listen the recorded audio')
-
-
-        self.plyback_btn = ttk.Button(buttons_frame, text= 'play selected format audio', command= self.playback_recorded_audio, style= 'my.TButton', bootstyle='secondary')
-        self.plyback_btn.pack(side=tk.LEFT, padx=32, pady=5)
-
-        self.btn_stop = ttk.Button(buttons_frame, text="⏹️", command=self.stop_recording_or_playing, style='my.TButton', bootstyle='secondary')
-        self.btn_stop.pack(side=tk.LEFT, padx=32, pady=5)
+        # self.btn_stop = ttk.Button(buttons_frame, text="⏹️", command=self.stop_recording_or_playing, style='my.TButton', bootstyle='secondary')
+        # self.btn_stop.pack(side=tk.LEFT, padx=32, pady=5)
         
-        # original_img = Image.open(r'C:\Users\richa\Downloads\TTS_DC\tkinter\800px-Auto_Racing_Red_Circle.svg.png')
-        # resized_img = original_img.resize((50, 50), Image.Resampling.LANCZOS)
-        # record_img = ImageTk.PhotoImage(resized_img)
-        # # Create a button with the image
-        # self.btn_record = ttk.Button(buttons_frame, image=record_img, command=self.start_recording,)
-        # self.btn_record.image = record_img  # Keep a reference to prevent garbage collection
-        # self.btn_record.pack(side=tk.LEFT, padx=32, pady=5)
-        self.btn_record = ttk.Button(buttons_frame, text="🔴", command=self.start_recording, style='my.TButton', bootstyle='danger')
+#######################################################################################################################################
+        def resource_path(relative_path):
+            """ Get the absolute path to the resource, works for dev and for PyInstaller """
+            try:
+                base_path = sys._MEIPASS
+            except Exception:
+                base_path = os.path.abspath(".")
+                
+            return os.path.join(base_path, relative_path)
+
+        def create_button_with_image(frame, image_path, command, style=None):
+            original_img = Image.open(image_path)
+            if command in {self.play_audio,self.previous_sentence,self.next_sentence}:
+                resized_img = original_img.resize((90, 50), Image.Resampling.LANCZOS)
+            else:
+                resized_img = original_img.resize((60, 60), Image.Resampling.LANCZOS)
+            img = ImageTk.PhotoImage(resized_img)
+            button = ttk.Button(frame, image=img, command=command, style=style)
+            button.image = img  
+            return button
+
+        self.btn_play = create_button_with_image(buttons_frame, resource_path('static_files/play3.jpg'), self.play_audio, style='NoBorder.TButton')
+        self.btn_stop = create_button_with_image(buttons_frame, resource_path('static_files/stop.png'), self.stop_recording_or_playing, style='NoBorder.TButton')
+        self.btn_record = create_button_with_image(buttons_frame, resource_path('static_files/record1.jpg'), self.start_recording, style='NoBorder.TButton')
+        self.btn_save = create_button_with_image(buttons_frame, resource_path('static_files/save1.png'), self.save_audio, style='NoBorder.TButton')
+        self.btn_previous = create_button_with_image(buttons_frame, resource_path('static_files/prev1.jpg'), self.previous_sentence, style='NoBorder.TButton')
+        self.btn_next = create_button_with_image(buttons_frame, resource_path('static_files/next1.jpg'), self.next_sentence, style='NoBorder.TButton')
+
+        # self.btn_play.pack(side=tk.LEFT, padx=32, pady=5)
+
+        # self.audio_var = tk.StringVar()
+        # self.audiotype_dropdown = ttk.Combobox(self.master, values=audio_types, width= 35)
+        # self.audiotype_dropdown.pack(pady=20, padx=15, side= LEFT)
+        # self.audiotype_dropdown.place(x = 30, y = 350)
+        # self.audiotype_dropdown.set('Select audio format to listen the recorded audio')
+
+
+        # self.plyback_btn = ttk.Button(buttons_frame, text= 'play selected format audio', command= self.playback_recorded_audio, style= 'my.TButton', bootstyle='secondary')
+        self.btn_play.pack(side=tk.LEFT, padx=32, pady=5)
+        self.btn_stop.pack(side=tk.LEFT, padx=32, pady=5)
         self.btn_record.pack(side=tk.LEFT, padx=32, pady=5)
-
-        self.btn_save = ttk.Button(buttons_frame, text="💾", command=self.save_audio, style='my.TButton', bootstyle='warning')
         self.btn_save.pack(side=tk.LEFT, padx=32, pady=5)
-
-        self.btn_previous = ttk.Button(buttons_frame, text="⏮️", command=self.previous_sentence, style='my.TButton', bootstyle='info')
         self.btn_previous.pack(side=tk.LEFT, padx=32, pady=5)
-
-        self.btn_next = ttk.Button(buttons_frame, text="⏭️", command=self.next_sentence, style='my.TButton', bootstyle='info')
         self.btn_next.pack(side=tk.LEFT, padx=32, pady=5)
+
+
+
+########################################################################################################################################
+        # self.btn_record = ttk.Button(buttons_frame, text="🔴", command=self.start_recording, style='my.TButton', bootstyle='danger', font=emoji_font)
+        # self.btn_record.pack(side=tk.LEFT, padx=32, pady=5)
+
+        # self.btn_save = ttk.Button(buttons_frame, text="💾", command=self.save_audio, style='my.TButton', bootstyle='warning')
+        # self.btn_save.pack(side=tk.LEFT, padx=32, pady=5)
+
+        # self.btn_previous = ttk.Button(buttons_frame, text="⏮️", command=self.previous_sentence, style='my.TButton', bootstyle='info')
+        # self.btn_previous.pack(side=tk.LEFT, padx=32, pady=5)
+
+        # self.btn_next = ttk.Button(buttons_frame, text="⏭️", command=self.next_sentence, style='my.TButton', bootstyle='info')
+        # self.btn_next.pack(side=tk.LEFT, padx=32, pady=5)
     
         # self.btn_skip = ttk.Button(buttons_frame, text="⏭️⏭️", command=self.skip_sentence)  # Use appropriate skip icon
         # self.btn_skip.pack(side=tk.LEFT, **padding)
@@ -286,6 +327,7 @@ class AudioRecorderApp:
             self.update_ui_with_sentence()
         else:
             print("ID not found.")
+            
     
     def update_ui_with_row(self, row):
         self.text_sentence.delete("1.0", tk.END)
@@ -296,7 +338,7 @@ class AudioRecorderApp:
         self.current_language = row['language']
 
     def update_ui_with_sentence(self):
-        if 0 <= self.current_index < len(self.data):
+        if self.data is not None and not self.data.empty and 0 <= self.current_index < len(self.data):
             # Fetching current row based on self.current_index
             current_row = self.data.iloc[self.current_index]
 
@@ -315,7 +357,9 @@ class AudioRecorderApp:
             self.current_speaker = current_row['speaker']
             self.current_language = current_row['language']
         else:
-            print("Index out of range.")
+            self.text_id.delete(0, tk.END)
+            self.text_sentence.delete("1.0", tk.END)
+            self.text_sentence.insert("1.0", "Please load a CSV file to display entries.")
 
     def select_and_save_csv(self):
         filepath = fd.askopenfilename(filetypes=[("Upload TRANSCRIPT", "*.csv")])
@@ -325,6 +369,7 @@ class AudioRecorderApp:
         filename = os.path.basename(filepath)
         self.target_path = os.path.join(target_folder, filename)
         shutil.copy(filepath, self.target_path)
+
         print(f"File saved to {self.target_path}")
         
     def load_csv(self):
@@ -402,7 +447,31 @@ class AudioRecorderApp:
         id = self.text_id.get()
         sentence = self.text_sentence.get("1.0", "end-1c")
         filename = f"{id}.wav" 
-        self.audio_recorder.save_recording(filename, self.audio_dir)
+        audio_duration = self.audio_recorder.save_recording(filename, self.audio_dir)
+        file_path = os.path.join(self.audio_dir, filename)
+        data = {
+            "easy_id": self.current_date,
+            "Sentence": sentence,
+            "speaker": self.current_speaker,
+            "language": self.current_language,
+            "style": self.current_language,
+            "category": self.current_category,
+            "data_id": id
+        }
+        with open(file_path, 'rb') as audio_file:
+            files = {
+                'audio_file': (filename, audio_file, 'audio/wav')
+            }
+            response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
+            
+        if response.ok:
+            self.count += 1
+            self.duration += round(audio_duration/60000, 2)
+            print("Successfully uplaoded the audio file and metadata.")
+            self.audio_count.config(text=f"Audio Count: {self.count}")
+            self.audio_duration.config(text=f"Duration: {self.duration} minutes") 
+        else:
+            print(f"Failed to upload hte audio file. Status code: {response.status_code}, Response: {response.text}")
 
     def previous_sentence(self):
         if self.current_index > 0:
@@ -422,3 +491,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
