@@ -15,39 +15,51 @@ from PIL import Image, ImageTk
 from utils.detect_silence import trim_silence  
 
 base_dir = 'data'
-my_styles = ["FEAR","PROPER NOUN","Happy","HAPPY","Sad","SAD","Disgust","DISGUST","BOOK","BB","WIKI","Surprise","SURPRISE","DIGI","ALEXA","NEWS","Anger","ANGER","INDIC","SANGRAH","CONV","UMANG"]
-my_languages = ['DEMO','ASM', 'BEN', 'BRX', 'DOI', 'GUJ', 'HIN', 'KAN', 'KAS', 'KOK', 'MAI', 'MAL', 'MAR', 'MNI', 'NEP', 'ORI', 'PAN', 'SAN', 'SAT', 'SND', 'TAM', 'TEL', 'URD']
-my_speakers = ['Male','Female']
+my_styles = ["Select Style", "FEAR","PROPER NOUN","Happy","HAPPY","Sad","SAD","Disgust","DISGUST","BOOK","BB","WIKI","Surprise","SURPRISE","DIGI","ALEXA","NEWS","Anger","ANGER","INDIC","SANGRAH","CONV","UMANG"]
+my_languages = ["Select Language",'DEMO','ASM', 'BEN', 'BRX', 'DOI', 'GUJ', 'HIN', 'KAN', 'KAS', 'KOK', 'MAI', 'MAL', 'MAR', 'MNI', 'NEP', 'ORI', 'PAN', 'SAN', 'SAT', 'SND', 'TAM', 'TEL', 'URD']
+my_speakers = ["Select Speaker", 'Male','Female']
+audio_types = ['48khz', '8khz']
     
 class AudioRecorder:
     def __init__(self):
         self.pyaudio_instance = pyaudio.PyAudio()
-        self.frames = []
+        self.frames_48000 = []
+        self.frames_8000 = []
         self.format = pyaudio.paInt16  # Defined as a class attribute for reuse
         self.channels = 1
-        self.rate = 48000
+        self.rate_48000 = 48000
+        self.rate_8000 = 8000
         self.frames_per_buffer = 1024
         self.is_recording = False
         self.stream = None
 
     def start_recording(self, device_index=None):
-        self.stream = self.pyaudio_instance.open(
+        self.stream_48000 = self.pyaudio_instance.open(
             format=self.format,
             channels=self.channels,
-            rate=self.rate,
+            rate=self.rate_48000,
             input=True,
             frames_per_buffer=self.frames_per_buffer,
             input_device_index=device_index,
         )
-        self.is_recording = True
-        self.recording_thread = threading.Thread(target=self._record_loop)
-        self.recording_thread.start()
+        self.stream_8000 = self.pyaudio_instance.open(format=self.format,
+            channels=self.channels,
+            rate=self.rate_8000,
+            input=True,
+            frames_per_buffer=self.frames_per_buffer,
+            input_device_index=device_index,)
         
-    def _record_loop(self):
+        self.is_recording = True
+        self.recording_thread_48000 = threading.Thread(target=self._record_loop, args=(self.stream_48000, self.frames_48000))
+        self.recording_thread_8000 = threading.Thread(target=self._record_loop, args=(self.stream_8000, self.frames_8000))
+        self.recording_thread_48000.start()
+        self.recording_thread_8000.start()
+        
+    def _record_loop(self, stream, frames):
         while self.is_recording:
             try:
-                data = self.stream.read(self.frames_per_buffer, exception_on_overflow=False)
-                self.frames.append(data)
+                data = stream.read(self.frames_per_buffer, exception_on_overflow=False)
+                frames.append(data)
             except:
                 KeyboardInterrupt
                 print('Keyboard Interupt')
@@ -56,27 +68,39 @@ class AudioRecorder:
     def stop_recording(self):
         if self.is_recording:
             self.is_recording = False   
-            self.recording_thread.join()       
-            self.stream.stop_stream()
-            self.stream.close()
+            self.recording_thread_48000.join()  
+            self.recording_thread_8000.join()
 
+            self.stream_48000.stop_stream()
+            self.stream_8000.stop_stream()
+            self.stream_48000.close()
+            self.stream_8000.close()
+    
     def save_recording(self, filename, audio_dir):
-        if not self.frames:
+        if not self.frames_48000 or not self.frames_8000:
             print("No audio to save.")
             return
-        self.audio_dir = audio_dir
-        os.makedirs(self.audio_dir, exist_ok=True)    
-        buffer = b''.join(self.frames)
-        audio_segment = AudioSegment(
-            buffer, 
-            sample_width=self.pyaudio_instance.get_sample_size(self.format),
-            channels=self.channels,
-            frame_rate=self.rate           
-        ) 
-        trimmed_wav, duration = trim_silence(audio_segment)
-        output_filename = os.path.join(self.audio_dir, f"{filename}")
-        trimmed_wav.export(output_filename, format='wav')
-        self.frames = []
+        self.audio_dir_48khz = os.path.join(audio_dir, '48khz')
+        self.audio_dir_8khz = os.path.join(audio_dir, '8khz')
+        os.makedirs(self.audio_dir_8khz, exist_ok= True)
+        os.makedirs(self.audio_dir_48khz, exist_ok=True)    
+
+        audio_segment_48000 = self._create_audio_segment(self.frames_48000, 48000)
+        audio_segment_8000 = self._create_audio_segment(self.frames_8000, 8000)
+
+        trimmed_wav_48k, duration_48k = trim_silence(audio_segment_48000)
+        output_filename_48k = os.path.join(self.audio_dir_48khz, f"{filename}")
+        trimmed_wav_48k.export(output_filename_48k, format='wav')
+        trimmed_wav_8k, duration_8k = trim_silence(audio_segment_8000)
+        output_filename_8k = os.path.join(self.audio_dir_8khz, f"{filename}")
+        trimmed_wav_8k.export(output_filename_8k, format = 'wav')
+        self.frames_48000 = []
+        self.frames_8000 = []
+
+    def _create_audio_segment(self, frames, rate):
+        buffer = b''.join(frames)
+        return AudioSegment(buffer, sample_width=self.pyaudio_instance.get_sample_size(self.format),
+                            channels=self.channels, frame_rate=rate)
 
     def record(self, data):
         self.frames.append(data)
@@ -119,22 +143,36 @@ class AudioRecorderApp:
         self.style_var = tk.StringVar()
         self.styles_dropdown = ttk.Combobox(self.master, textvariable=self.style_var, values=my_styles)
         self.styles_dropdown.pack(pady=20)
+        self.styles_dropdown.set('Select Style')
 
         # Languages Dropdown
         self.language_var = tk.StringVar()
         self.languages_dropdown = ttk.Combobox(self.master, textvariable=self.language_var, values=my_languages)
         self.languages_dropdown.pack(pady=20)
+        self.languages_dropdown.set('Select Language')
         
         # Speaker Dropdown
         self.speaker_var = tk.StringVar()
         self.speakers_dropdown = ttk.Combobox(self.master, textvariable=self.speaker_var, values=my_speakers)
         self.speakers_dropdown.pack(pady=20)
-        
+        self.speakers_dropdown.set('Select Speaker')
+
+        # Microphone Dropdown
+
+        self.microphone_var = tk.StringVar()
+        self.microphone_dropdown = ttk.Combobox(self.master, textvariable=self.microphone_var, state='readonly')
+        self.microphone_dropdown.pack(pady= 20)
+        self.microphone_dropdown.set('Select Microphone')
+       
+        self.update_microphone_dropdown()
+
+
         # Add a submit button
         self.submit_btn = tk.Button(self.master, text="Submit", command=self.on_submit)
         self.submit_btn.pack(pady=20)
         
-        
+       # print(self.microphone_var.get())
+
     def show_date_and_options_ui(self):
         self.setup_date_selection()
         self.setup_dropdowns() 
@@ -144,13 +182,33 @@ class AudioRecorderApp:
         language = self.language_var.get()
         style =self.style_var.get()
         speaker = self.speaker_var.get()
-        current_date = self.my_date.entry.get()
-        self.audio_dir = os.path.join(base_dir,language,speaker,style,current_date)
-        os.makedirs(self.audio_dir, exist_ok=True)
+        current_date = self.my_date.entry.get().replace("/", "-")
+        print(current_date)
+        if language == 'Select Language' or style == 'Select Style' or speaker == 'Select Speaker':
+            messagebox.showerror("ERROR!!", "Please select a valid option.")
+        else:
+            self.audio_dir = os.path.join(base_dir,language,speaker,style,current_date)
+            os.makedirs(self.audio_dir, exist_ok=True)
+            print(self.audio_dir)
+            messagebox.showinfo("Success", "Directory Created")
+            
         
     def on_submit(self):
         self.make_directory()
-        messagebox.showinfo("Success", "Directory Created")
+
+    def update_microphone_dropdown(self):
+        # Get device info for each input device (microphone)
+        self.pyaudio_instance = pyaudio.PyAudio()
+        self.num_devices = self.pyaudio_instance.get_device_count()
+        microphone_options = ['Select Microphone']
+        for i in range(self.num_devices):
+            device_info = self.pyaudio_instance.get_device_info_by_index(i)
+            if device_info['maxInputChannels'] > 0:
+                microphone_name = device_info['name']
+                microphone_options.append(f"Microphone {i}: {microphone_name}")
+        
+        # Update dropdown options
+        self.microphone_dropdown['values'] = microphone_options
     
     def create_widgets(self):
         self.master.minsize(width=1536, height=480)  # Set the minimum size of the window
@@ -176,8 +234,16 @@ class AudioRecorderApp:
         buttons_frame.pack(pady=0)
 
         # self.btn_play = ttk.Button(buttons_frame, text="▶️", command=self.play_audio, style='danger.TButton', bootstyle='success')
-        self.btn_play = ttk.Button(buttons_frame, text="PLAY", command=self.play_audio, style='success.TButton, bold', bootstyle='success')
-        self.btn_play.pack(side=tk.LEFT, padx=32, pady=5)
+        # self.btn_play = ttk.Button(buttons_frame, text="PLAY", command=self.play_audio, style='success.TButton, bold', bootstyle='success')
+        # self.btn_play.pack(side=tk.LEFT, padx=32, pady=5)
+
+        self.audio_var = tk.StringVar()
+        self.audiotype_dropdown = ttk.Combobox(self.master, values=audio_types)
+        self.audiotype_dropdown.pack(pady=20, padx=15)
+        self.audiotype_dropdown.set('Select audio format')
+
+        self.plyback_btn = ttk.Button(buttons_frame, text= 'play selected format audio', command= self.playback_recorded_audio, style= 'my.TButton', bootstyle='secondary')
+        self.plyback_btn.pack(side=tk.LEFT, padx=32, pady=5)
 
         self.btn_stop = ttk.Button(buttons_frame, text="⏹️", command=self.stop_recording_or_playing, style='my.TButton', bootstyle='secondary')
         self.btn_stop.pack(side=tk.LEFT, padx=32, pady=5)
@@ -203,7 +269,7 @@ class AudioRecorderApp:
     
         # self.btn_skip = ttk.Button(buttons_frame, text="⏭️⏭️", command=self.skip_sentence)  # Use appropriate skip icon
         # self.btn_skip.pack(side=tk.LEFT, **padding)
-        
+      
     def load_entry_from_id(self, event=None):
         entered_id = self.text_id.get().strip()          
         matching_index = self.data.index[self.data['ID']==entered_id].tolist()
@@ -285,8 +351,34 @@ class AudioRecorderApp:
         stream.close()
         p.terminate()
 
+    def playback_recorded_audio(self):
+        if self.audiotype_dropdown.get() == '48khz':
+            frames = self.audio_recorder.frames_48000
+            rate = 48000
+        elif self.audiotype_dropdown.get() == '8khz':
+            frames = self.audio_recorder.frames_8000
+            rate = 8000
+        if not frames:
+            messagebox.showerror('Error!!', 'No audio to play')
+        else:
+         # Open an output stream
+            self.audio = pyaudio.PyAudio()
+            playback_stream = self.audio.open(format=pyaudio.paInt16, channels=1, rate=rate, output=True, input_device_index= int(self.microphone_dropdown.get().split(' ')[1].replace(':', '')))
+            try:
+                # Write the recorded frames to the playback stream
+                for data in frames:
+                    #print(data)
+                    playback_stream.write(data)
+            except KeyboardInterrupt:
+                print('Keyboard interruption during playback')
+            finally:
+                # Stop and close the playback stream
+                playback_stream.stop_stream()
+                playback_stream.close()
+
     def start_recording(self):
-        self.audio_recorder.start_recording()
+        index = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
+        self.audio_recorder.start_recording(device_index=index)
 
     def stop_recording_or_playing(self):
         self.audio_recorder.stop_recording()
@@ -308,6 +400,7 @@ class AudioRecorderApp:
             self.update_ui_with_sentence()
 #################################################################################
 def main():
+    
     root = ttkb.Window(themename='superhero') # Main/Parent Window - Offers access to geometric configuration of widgets.
     app = AudioRecorderApp(root)
     root.mainloop() # infinite loop, waits for an event to occur and process the event until window closed.
