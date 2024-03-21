@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import *
 from tkinter import ttk
 import ttkbootstrap as ttkb
 from ttkbootstrap.constants import *
@@ -121,9 +122,10 @@ class AudioRecorderApp:
         self.data = None # Load your CSV data here
         self.setup_menu()
         self.create_widgets()
-        self.update_ui_with_sentence()  # Add this line to load the first sentence on startup
+        self.update_ui_with_sentence()  # Add this line to load the first sentence on startu
+        self.audio_dir = ''
+        #self.master.attributes('-topmost', True)
 
-    
     def setup_menu(self):
         # Create menu
         # Add a menu bar for CSV handling
@@ -170,7 +172,6 @@ class AudioRecorderApp:
         self.microphone_dropdown = ttk.Combobox(self.master, textvariable=self.microphone_var, state='readonly')
         self.microphone_dropdown.pack(pady= 20)
         self.microphone_dropdown.set('Select Microphone')
-       
         self.update_microphone_dropdown()
 
 
@@ -191,13 +192,13 @@ class AudioRecorderApp:
         speaker = self.speaker_var.get()
         self.current_date = self.my_date.entry.get().replace("/", "-")
         if language == 'Select Language' or style == 'Select Style' or speaker == 'Select Speaker':
-            messagebox.showerror("ERROR!!", "Please select a valid option.")
+            self.popup_message("ERROR!! Please select a valid option to create the folder")
         else:
             self.audio_dir = os.path.join(base_dir,language,speaker,style,self.current_date)
             os.makedirs(self.audio_dir, exist_ok=True)
             print(self.audio_dir)
-            messagebox.showinfo("Success", "Directory Created")
-            self.master.after(1000, lambda: messagebox._show("Success", "Directory Created"))
+            self.popup_message("Success! Directory Created")
+            #self.master.after(2000, success_message.destroy)
             
         
     def on_submit(self):
@@ -276,13 +277,15 @@ class AudioRecorderApp:
             button.image = img  
             return button
 
-        self.btn_play = create_button_with_image(buttons_frame, resource_path('static_files/play3.jpg'), self.play_audio, style='NoBorder.TButton')
+        self.btn_play = create_button_with_image(buttons_frame, resource_path('static_files/play3.jpg'), self.play_audio_file, style='NoBorder.TButton')
         self.btn_stop = create_button_with_image(buttons_frame, resource_path('static_files/stop.png'), self.stop_recording_or_playing, style='NoBorder.TButton')
         self.btn_record = create_button_with_image(buttons_frame, resource_path('static_files/record1.jpg'), self.start_recording, style='NoBorder.TButton')
         self.btn_save = create_button_with_image(buttons_frame, resource_path('static_files/save1.png'), self.save_audio, style='NoBorder.TButton')
         self.btn_previous = create_button_with_image(buttons_frame, resource_path('static_files/prev1.jpg'), self.previous_sentence, style='NoBorder.TButton')
         self.btn_next = create_button_with_image(buttons_frame, resource_path('static_files/next1.jpg'), self.next_sentence, style='NoBorder.TButton')
-
+        
+        self.btn_stop.bind("<space>", self.stop_recording_or_playing())
+        self.btn_record.bind('<Key-asterisk>', lambda event: self.start_recording())
         # self.btn_play.pack(side=tk.LEFT, padx=32, pady=5)
 
         # self.audio_var = tk.StringVar()
@@ -300,7 +303,7 @@ class AudioRecorderApp:
         self.btn_previous.pack(side=tk.LEFT, padx=32, pady=5)
         self.btn_next.pack(side=tk.LEFT, padx=32, pady=5)
 
-
+#        self.master.bin
 
 ########################################################################################################################################
         # self.btn_record = ttk.Button(buttons_frame, text="🔴", command=self.start_recording, style='my.TButton', bootstyle='danger', font=emoji_font)
@@ -337,7 +340,7 @@ class AudioRecorderApp:
         self.current_speaker = row['speaker']
         self.current_language = row['language']
 
-    def update_ui_with_sentence(self):
+    def update_ui_with_sentence(self): 
         if self.data is not None and not self.data.empty and 0 <= self.current_index < len(self.data):
             # Fetching current row based on self.current_index
             current_row = self.data.iloc[self.current_index]
@@ -384,24 +387,30 @@ class AudioRecorderApp:
         filename = os.path.join(self.audio_dir,f"{id}.wav")
         if not os.path.exists(filename):
             messagebox.showerror("Error", f"Audio file {filename} does not exists.")
+            self.master.after(2000, self.destroy_messagebox)
             return
         threading.Thread(target=self.play_audio_file, args=(filename,)).start()
         
-    def play_audio_file(self, filename):
-        wf = wave.open(filename, 'rb')
+    def play_audio_file(self):
+       # wf = wave.open(filename, 'rb')
         p = pyaudio.PyAudio()
-        stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
-                        channels=wf.getnchannels(),
-                        rate=wf.getframerate(),
-                        output=True)
-        chunk_size=1024
-        data=wf.readframes(chunk_size)
-        while data:
-            stream.write(data)
-            data=wf.readframes(chunk_size)
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
+        if self.audio_recorder.frames_48000 is None:
+           self.popup_message('Warning! No audio to play!!')
+        else:  
+            playback_stream = p.open(format=pyaudio.paInt16, channels=1, rate=48000, output=True, input_device_index= int(self.microphone_dropdown.get().split(' ')[1].replace(':', '')))         
+            try:
+                # Write the recorded frames to the playback stream
+                for data in self.audio_recorder.frames_48000:
+                    #print(data)
+                    playback_stream.write(data)
+            except KeyboardInterrupt:
+                print('Keyboard interruption during playback')
+            finally:
+                # Stop and close the playback stream
+                playback_stream.stop_stream()
+                playback_stream.close()
+        
+            p.terminate()
 
     def playback_recorded_audio(self):
         #frames = []
@@ -434,11 +443,13 @@ class AudioRecorderApp:
                 playback_stream.close()
 
     def start_recording(self):
-        index = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
-        messagebox.showinfo("Recording Started", "Recording has started.")
-        self.master.after(2000, lambda: messagebox._show("Recording Started", "Recording has started."))
-
-        self.audio_recorder.start_recording(device_index=index)
+        print("audio_dir")
+        if self.audio_dir == '':
+            self.popup_message('ERROR!! please select the style, language and speak to create the respective folder before starting to  record', destroy_duration= 4000)
+        else:
+            index = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
+            self.popup_message('Recording started!!')
+            self.audio_recorder.start_recording(device_index=index)
 
     def stop_recording_or_playing(self):
         self.audio_recorder.stop_recording()
@@ -482,11 +493,21 @@ class AudioRecorderApp:
         if self.current_index < len(self.data) - 1:
             self.current_index += 1
             self.update_ui_with_sentence()
+    
+    def popup_message(self, message : str, destroy_duration = 750):
+        top = Toplevel()
+        top.title('To note.')
+        top.attributes('-topmost', True)
+        Message(top, text=message, padx=20, pady=20).pack()
+        top.after(destroy_duration, top.destroy)
+
 #################################################################################
 def main():
     
     root = ttkb.Window(themename='superhero') # Main/Parent Window - Offers access to geometric configuration of widgets.
     app = AudioRecorderApp(root)
+    root.bind('<Key-asterisk>', lambda event: app.start_recording())
+    root.bind('<space>', lambda event: app.stop_recording_or_playing())
     root.mainloop() # infinite loop, waits for an event to occur and process the event until window closed.
 
 if __name__ == "__main__":
