@@ -27,7 +27,7 @@ class AudioRecorder:
         self.pyaudio_instance = pyaudio.PyAudio()
         self.frames_48000 = []
         self.frames_8000 = []
-        self.format = pyaudio.paInt16  # Defined as a class attribute for reuse
+        self.format = pyaudio.paInt16  # 16 bits per sample
         self.channels = 1
         self.rate_48000 = 48000
         self.rate_8000 = 8000
