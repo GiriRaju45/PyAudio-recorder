@@ -19,7 +19,7 @@ from tkinter import messagebox
 from pydub import AudioSegment
 from pydub.playback import play
 from PIL import Image, ImageTk
-import multiprocessing
+#import multiprocessing
 import pyglet
 # import pygame
 from utils.detect_silence import trim_silence  
@@ -344,6 +344,7 @@ class AudioRecorderApp:
         if matching_index:
             self.current_index = matching_index[0]
             self.update_ui_with_sentence()
+            self.play_audio_file()
         else:
             print("ID not found.")
             
@@ -410,9 +411,10 @@ class AudioRecorderApp:
     def play_audio_file(self):
 
         id = self.text_id.get().strip()
-        filename = os.path.join(self.audio_dir,f"{id}.wav")
+        filename = os.path.join(self.audio_dir+ '/48khz',f"{id}.wav")
         if os.path.exists(filename):
-            self.popup_message('Loading Audio', 1000)   
+            self.popup_message('Loading Audio', 1000) 
+            self.playback_seekbar(audio_file_name= filename)  
         elif self.audio_recorder.frames_48000 != []:
             self.playback_seekbar()
         else:
@@ -551,17 +553,20 @@ class AudioRecorderApp:
         Message(top, text=message, padx=20, pady=20).pack()
         top.after(destroy_duration, top.destroy)
 
-    def playback_seekbar(self): 
+    def playback_seekbar(self, audio_file_name  = None): 
 
         #seekbar intializations
 
         self.playback_frame = ttk.Frame(self.master)
         self.playback_frame.pack()
-        self.raw_data = b''.join(self.audio_recorder.frames_48000)
-        self.np_data = np.frombuffer(self.raw_data, dtype= np.int16)
-        self.seg = self.audio_recorder._create_audio_segment(self.audio_recorder.frames_48000, rate= 48000)
-        self.seg.export('temp.wav', format= 'wav') 
-        self.audio_data = pyglet.media.load('temp.wav', streaming= False)
+        if audio_file_name is not None:
+            self.audio_data = pyglet.media.load(audio_file_name, streaming = False)
+        else:
+            self.raw_data = b''.join(self.audio_recorder.frames_48000)
+            self.np_data = np.frombuffer(self.raw_data, dtype= np.int16)
+            self.seg = self.audio_recorder._create_audio_segment(self.audio_recorder.frames_48000, rate= 48000)
+            self.seg.export('temp.wav', format= 'wav') 
+            self.audio_data = pyglet.media.load('temp.wav', streaming= False)
         self.player = pyglet.media.Player()
         # self.player.loop = True
         self.player.queue(self.audio_data)
