@@ -344,7 +344,6 @@ class AudioRecorderApp:
         if matching_index:
             self.current_index = matching_index[0]
             self.update_ui_with_sentence()
-            self.play_audio_file()
         else:
             print("ID not found.")
             
@@ -489,9 +488,11 @@ class AudioRecorderApp:
             if key == 'space':
                 self.audio_recorder.stop_recording()
                 self.popup_message('Recording stopped')
+                self.playback_seekbar()
         elif button_click == True:
             self.audio_recorder.stop_recording()
             self.popup_message('Recording stopped')
+            self.playback_seekbar()
      
 
     def save_audio(self):
