@@ -23,6 +23,7 @@ from pydub.playback import play
 from PIL import Image, ImageTk
 #import multiprocessing
 import pyglet
+import wave
 # import pygame
 from utils.detect_silence import trim_silence  
 
@@ -263,6 +264,7 @@ class AudioRecorderApp:
         self.text_sentence.insert("1.0", "Please use the load CSV option in the File menu to display the sentence.")
         style = ttk.Style()
         style.configure('NoBorder.TButton', borderwidth=0, highlightthickness=0)
+        
         # style.configure('danger.TButton', font=('Helvetica', 60), padding=30) # Modify font size and padding as needed
         
 
@@ -348,7 +350,7 @@ class AudioRecorderApp:
             self.update_ui_with_sentence()
         else:
             print("ID not found.")
-            
+        self.play_audio_file()
     
     def update_ui_with_row(self, row):
         self.text_sentence.delete("1.0", tk.END)
@@ -569,9 +571,16 @@ class AudioRecorderApp:
         if audio_file_name is not None:
             self.audio_data = pyglet.media.load(audio_file_name, streaming = False)
             self.seg = AudioSegment.from_file(file= audio_file_name, format= 'wav')
+            with wave.open(audio_file_name, 'rb') as wf:
+                num_frames = wf.getnframes()
+                print(num_frames)
+                self.raw_data = wf.readframes(num_frames)
+                print(type(self.raw_data))
+                self.np_data = np.frombuffer(self.raw_data, dtype=np.int16) 
         else:
             self.raw_data = b''.join(self.audio_recorder.frames_48000)
             self.np_data = np.frombuffer(self.raw_data, dtype= np.int16)
+            print(len(self.np_data))
             self.seg = self.audio_recorder._create_audio_segment(self.audio_recorder.frames_48000, rate= 48000)
             self.seg.export('temp.wav', format= 'wav') 
             self.audio_data = pyglet.media.load('temp.wav', streaming= False)
@@ -772,11 +781,10 @@ class AudioRecorderApp:
     def plot_waveform(self):
         
         # pass
-        self.np_aud_data = np.frombuffer(b''.join(self.audio_recorder.frames_48000), dtype= np.int16)
         print(self.seg.dBFS)
         dbfs_frames = [frame.dBFS for frame in self.seg]
-        print(len(self.np_aud_data))
-        time_in_sec = np.arange(self.audio_duration)
+        print(len(self.np_data))
+        time_in_sec = np.linspace(0, self.audio_duration, len(self.np_data))
         # fig = plt.figure(figsize=(8, 2))
         # plt.plot(dbfs_frames, color='blue')
         # plt.xlabel('Time (samples)')
@@ -787,7 +795,7 @@ class AudioRecorderApp:
         fig2 = plt.figure(figsize=(8,3))
 
         # plt.figure(figsize=(8, 2))
-        plt.plot(time_in_sec,self.np_aud_data, color='#0D2740')
+        plt.plot(time_in_sec, self.np_data, color='#0D2740')
         plt.xlabel('Time (seconds)')
         plt.ylabel('Amplitude')
         #plt.title('Waveform')
