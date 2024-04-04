@@ -631,7 +631,7 @@ class AudioRecorderApp:
         #     self.start = True
         #     self.play_start_time = time.time()
         #     # self.start = False
-        # elif self.start:
+        ## elif self.start:
         #     print('audio played already once.. trying to seek from 0.1')
         #     self.player.seek(0.1)
         #     self.player.play()
