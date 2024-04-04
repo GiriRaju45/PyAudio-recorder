@@ -264,6 +264,7 @@ class AudioRecorderApp:
         self.text_sentence.insert("1.0", "Please use the load CSV option in the File menu to display the sentence.")
         style = ttk.Style()
         style.configure('NoBorder.TButton', borderwidth=0, highlightthickness=0)
+        style.map('NoBorder.TButton', foreground = [('disabled','#0D2740'), (('active', 'blue'))])
         
         # style.configure('danger.TButton', font=('Helvetica', 60), padding=30) # Modify font size and padding as needed
         
@@ -345,12 +346,19 @@ class AudioRecorderApp:
         entered_id = self.text_id.get().strip()          
         matching_index = self.data.index[self.data['ID']==entered_id].tolist()
         
-        if matching_index:
+        if matching_index and self.current_index != matching_index:
             self.current_index = matching_index[0]
             self.update_ui_with_sentence()
+            if self.playback_frame is not None:
+               self.playback_frame.destroy()
+            self.audio_recorder.frames_48000 = []
+            self.audio_recorder.frames_8000 = []
+        elif matching_index == self.current_index:
+            pass
         else:
             print("ID not found.")
         self.play_audio_file()
+        
     
     def update_ui_with_row(self, row):
         self.text_sentence.delete("1.0", tk.END)
@@ -422,6 +430,8 @@ class AudioRecorderApp:
             self.playback_seekbar()
         else:
             self.popup_message('No audio to play!', 1000)
+            if self.playback_frame is not None:
+               self.playback_frame.destroy()
        # wf = wave.open(filename, 'rb')
         # p = pyaudio.PyAudio()
         # if self.audio_recorder.frames_48000 is None:
