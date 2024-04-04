@@ -15,8 +15,10 @@ import os
 import requests
 import threading
 import sys
+import librosa
 from tkinter import messagebox
 from pydub import AudioSegment
+from pydub.utils import mediainfo
 from pydub.playback import play
 from PIL import Image, ImageTk
 #import multiprocessing
@@ -109,7 +111,7 @@ class AudioRecorder:
         output_filename_8k = os.path.join(self.audio_dir_8khz, f"{filename}")
         trimmed_wav_8k.export(output_filename_8k, format = 'wav')
 
-        return 'saved!'
+        return duration_48k
 
     def _create_audio_segment(self, frames, rate):
         buffer = b''.join(frames)
@@ -292,7 +294,7 @@ class AudioRecorderApp:
             return button
 
         self.btn_play = create_button_with_image(buttons_frame, resource_path('static_files/icons8-circled-play-96.png'), self.play_audio_file, style='NoBorder.TButton')
-        self.btn_stop = create_button_with_image(buttons_frame, resource_path('static_files/icons8-stop-96.png'), self.stop_recording_or_playing(button_click=True), style='NoBorder.TButton')
+        self.btn_stop = create_button_with_image(buttons_frame, resource_path('static_files/icons8-stop-96.png'), self.stop_recording_or_playing, style='NoBorder.TButton')
         self.btn_record = create_button_with_image(buttons_frame, resource_path('static_files/icons8-microphone-100.png'), self.start_recording, style='NoBorder.TButton')
         self.btn_save = create_button_with_image(buttons_frame, resource_path('static_files/icons8-save-button-96.png'), self.save_audio, style='NoBorder.TButton')
         self.btn_previous = create_button_with_image(buttons_frame, resource_path('static_files/icons8-previous-96.png'), self.previous_sentence, style='NoBorder.TButton')
@@ -410,7 +412,7 @@ class AudioRecorderApp:
     def play_audio_file(self):
 
         id = self.text_id.get().strip()
-        filename = os.path.join(self.audio_dir+ '/48khz',f"{id}.wav")
+        filename = os.path.join(self.audio_dir, '48khz',f"{id}.wav")
         if os.path.exists(filename):
             self.popup_message('Loading Audio', 1000) 
             self.playback_seekbar(audio_file_name= filename)  
@@ -470,7 +472,9 @@ class AudioRecorderApp:
     #             playback_stream.stop_stream()
     #             playback_stream.close()
 
-    def start_recording(self):
+    def start_recording(self, event=None):
+        self.audio_recorder.frames_48000=[]
+        self.audio_recorder.frames_8000=[]
         if self.audio_dir == '':
             self.popup_message('ERROR!! please select the style, language and speak to create the respective folder before starting to  record', destroy_duration= 4000)
         else:
@@ -478,21 +482,21 @@ class AudioRecorderApp:
             self.popup_message('Recording started!!')
             self.audio_recorder.start_recording(device_index=index)
 
-    def stop_recording_or_playing(self , event = None, button_click = False):
-        
-        if event == None:
-            print('*')
-        elif event != None:
-            #print('entered if cond')
-            key = event.keysym
-            if key == 'space':
-                self.audio_recorder.stop_recording()
-                self.popup_message('Recording stopped')
-                self.playback_seekbar()
-        elif button_click == True:
-            self.audio_recorder.stop_recording()
-            self.popup_message('Recording stopped')
-            self.playback_seekbar()
+    def stop_recording_or_playing(self , event = None):
+        self.audio_recorder.stop_recording()
+        self.popup_message('Recording stopped')
+        self.playback_seekbar()
+        # if event == None:
+        #     print('*')
+        # elif event != None:
+        #     #print('entered if cond')
+        #     key = event.keysym
+        #     if key == 'space':
+        #         self.audio_recorder.stop_recording()
+        #         self.popup_message('Recording stopped')
+        # elif button_click == True:
+        #     self.audio_recorder.stop_recording()
+        #     self.popup_message('Recording stopped')
      
 
     def save_audio(self):
@@ -501,31 +505,31 @@ class AudioRecorderApp:
         filename = f"{id}.wav" 
 
         audio_duration = self.audio_recorder.save_recording(filename, self.audio_dir)
-        file_path = os.path.join(self.audio_dir, filename)
+        file_path = os.path.join(self.audio_dir,'48khz', filename)
 
-        # data = {
-        #     "easy_id": self.current_date,
-        #     "Sentence": sentence,
-        #     "speaker": self.current_speaker,
-        #     "language": self.current_language,
-        #     "style": self.current_language,
-        #     "category": self.current_category,
-        #     "data_id": id
-        # }
-        # with open(file_path, 'rb') as audio_file:
-        #     files = {
-        #         'audio_file': (filename, audio_file, 'audio/wav')
-        #     }
-        #     response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
+        data = {               
+            "easy_id": self.current_date,
+            "Sentence": sentence,
+            "speaker": self.current_speaker,
+            "language": self.current_language,
+            "style": self.current_language,
+            "category": self.current_category,
+            "data_id": id
+        }
+        with open(file_path, 'rb') as audio_file:
+            files = {
+                'audio_file': (filename, audio_file, 'audio/wav')
+            }
+            response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
             
-        # if response.ok:
-        #     self.count += 1
-        #     self.duration += round(audio_duration/60000, 2)
-        #     print("Successfully uplaoded the audio file and metadata.")
-        #     self.audio_count.config(text=f"Audio Count: {self.count}")
-        #     self.audio_duration.config(text=f"Duration: {self.duration} minutes") 
-        # else:
-        #     print(f"Failed to upload hte audio file. Status code: {response.status_code}, Response: {response.text}")
+        if response.ok:
+            self.count += 1
+            self.duration += round(audio_duration/60000, 2)
+            print("Successfully uplaoded the audio file and metadata.")
+            self.audio_count.config(text=f"Audio Count: {self.count}")
+            self.total_aud_duration.config(text=f"Duration: {self.duration} minutes") 
+        else:
+            print(f"Failed to upload hte audio file. Status code: {response.status_code}, Response: {response.text}")
         if audio_duration is None:
             self.popup_message('Error! No audio to save!!', destroy_duration= 2000)
         else:
@@ -557,11 +561,14 @@ class AudioRecorderApp:
     def playback_seekbar(self, audio_file_name  = None): 
 
         #seekbar intializations
+        if hasattr(self, 'playback_frame') and self.playback_frame is not None:
+            self.playback_frame.destroy()
 
         self.playback_frame = ttk.Frame(self.master)
         self.playback_frame.pack()
         if audio_file_name is not None:
             self.audio_data = pyglet.media.load(audio_file_name, streaming = False)
+            self.seg = AudioSegment.from_file(file= audio_file_name, format= 'wav')
         else:
             self.raw_data = b''.join(self.audio_recorder.frames_48000)
             self.np_data = np.frombuffer(self.raw_data, dtype= np.int16)
@@ -573,7 +580,7 @@ class AudioRecorderApp:
         self.player.queue(self.audio_data)
         self.player.on_eos = self.player.pause()
         self.player.loop = True
-            # self.player.loop = True
+        # self.player.loop = True
         self.paused = False
         self.resumed = False
         self.seek = False
@@ -623,7 +630,7 @@ class AudioRecorderApp:
         #     self.start = True
         #     self.play_start_time = time.time()
         #     # self.start = False
-        # elif self.start:
+        ## elif self.start:
         #     print('audio played already once.. trying to seek from 0.1')
         #     self.player.seek(0.1)
         #     self.player.play()
@@ -763,17 +770,20 @@ class AudioRecorderApp:
 
 
     def plot_waveform(self):
+        
         # pass
         self.np_aud_data = np.frombuffer(b''.join(self.audio_recorder.frames_48000), dtype= np.int16)
         print(self.seg.dBFS)
         dbfs_frames = [frame.dBFS for frame in self.seg]
         print(len(self.np_aud_data))
-        time_in_sec = np.arange(len(self.np_aud_data)) / self.audio_recorder.rate_48000
+        time_in_sec = np.arange(self.audio_duration)
         # fig = plt.figure(figsize=(8, 2))
         # plt.plot(dbfs_frames, color='blue')
         # plt.xlabel('Time (samples)')
         # plt.ylabel('Amplitude (dB)')
         # plt.title('Waveform in Decibels')
+        if hasattr(self, 'canvas2'):
+            self.canvas2.get_tk_widget().destroy()
         fig2 = plt.figure(figsize=(8,3))
 
         # plt.figure(figsize=(8, 2))
