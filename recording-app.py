@@ -357,6 +357,7 @@ class AudioRecorderApp:
             pass
         else:
             print("ID not found.")
+            self.popup_message('ID not found. Please enter a valid ID', destroy_duration= 2000)
         self.play_audio_file()
         
     
