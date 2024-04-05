@@ -228,13 +228,11 @@ class AudioRecorderApp:
         self.speakers_dropdown.set('Select Speaker')
 
         # Microphone Dropdown
-
         self.microphone_var = tk.StringVar()
         self.microphone_dropdown = ttk.Combobox(drop_frame, textvariable=self.microphone_var, state='readonly')
         self.microphone_dropdown.pack(pady=(40, 0), padx = 10, side = tk.LEFT)
         self.microphone_dropdown.set('Select Microphone')
         self.update_microphone_dropdown()
-
 
         # Add a submit button
         self.submit_btn = tk.Button(drop_frame, text="Submit", command=self.on_submit)
@@ -244,21 +242,19 @@ class AudioRecorderApp:
         main_frame = ttk.Frame(self.master)
         main_frame.pack(pady= (30, 0),expand=False)
 
-
-      
         self.audio_count = ttk.Label(main_frame, text=f"Audio Count: {self.count}", font=('Times New Roman', 18, 'bold'), width=24, bootstyle="success", foreground= '#0D2740')
         self.audio_count.pack()
 
         self.total_aud_duration = ttk.Label(main_frame, text=f"Total Duration: {self.duration} minutes", font=('Times New Roman', 18, 'bold'), width=24, bootstyle="success", foreground= '#0D2740')
         self.total_aud_duration.pack()
         
-        
+
         self.text_id = ttk.Entry(main_frame, font=('Times New Roman', 18, 'bold'), width=24, bootstyle="danger")
         self.text_id.bind('<Return>', self.load_entry_from_id)
         self.text_id.pack(pady=(16, 0))  # Padding only at the top
 
-        bold_font = ('Arial Unicode MS', 22)  # Using 'Arial Unicode MS' for better Unicode character support
-        self.text_sentence = tk.Text(main_frame, height=3, width=65, wrap="word", font=bold_font, spacing3=22)
+        bold_font = ('Arial Unicode MS', 20)  # Using 'Arial Unicode MS' for better Unicode character support
+        self.text_sentence = tk.Text(main_frame, height=3, width=65, wrap="word", font=bold_font, spacing1=10, spacing2=10, spacing3=10)
         self.text_sentence.tag_configure("center", justify='center')
         self.text_sentence.pack(pady=20, padx=10)  # Padding on sides for the Text widget
         self.text_sentence.insert("1.0", "Please use the load CSV option in the File menu to display the sentence.")
