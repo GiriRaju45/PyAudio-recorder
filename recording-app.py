@@ -563,6 +563,7 @@ class AudioRecorderApp:
         self.playback_frame = ttk.Frame(self.master)
         self.playback_frame.pack()
         if audio_file_name is not None:
+            print('audio file existss')
             self.audio_data = pyglet.media.load(audio_file_name, streaming = False)
             self.seg = AudioSegment.from_file(file= audio_file_name, format= 'wav')
             with wave.open(audio_file_name, 'rb') as wf:
@@ -574,6 +575,7 @@ class AudioRecorderApp:
         else:
             self.raw_data = b''.join(self.audio_recorder.frames_48000)
             self.np_data = np.frombuffer(self.raw_data, dtype= np.int16)
+            print('no file, loading from the current recording frames')
             print(len(self.np_data))
             self.seg = self.audio_recorder._create_audio_segment(self.audio_recorder.frames_48000, rate= 48000)
             self.seg.export('temp.wav', format= 'wav') 
@@ -582,7 +584,7 @@ class AudioRecorderApp:
         # self.player.loop = True
         self.player.queue(self.audio_data)
         self.player.on_eos = self.player.pause()
-        self.player.loop = True
+        #self.player.loop = True
         # self.player.loop = True
         self.paused = False
         self.resumed = False
@@ -706,7 +708,7 @@ class AudioRecorderApp:
         elif self.resumed and not self.paused:
             if self.current_time < self.audio_duration:
                 self.current_time += 0.1
-                #print('new current time: ',self.current_time)
+                print('new current time: ',self.current_time)
                 self.seek_bar.set(self.current_time)
                 self.current_time= self.seek_bar.get()
             else:
@@ -715,6 +717,7 @@ class AudioRecorderApp:
         elif self.seek:
             if self.current_time < self.audio_duration:
                 self.current_time += 0.1
+                print('new current time: ',self.current_time)
                 self.seek_bar.set(self.current_time)
                 self.current_time = self.seek_bar.get()
             else:
@@ -724,7 +727,7 @@ class AudioRecorderApp:
             self.seek_bar.set(0.0)
             self.stop = False
 
-        self.master.after(100, self.update_seek_bar)
+        self.playback_frame.after(100, self.update_seek_bar)
 
     def plot_waveform(self):
         
