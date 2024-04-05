@@ -123,6 +123,11 @@ class AudioRecorder:
         self.frames.append(data)
     
 #################################################################################
+class Extra(tk.Toplevel):
+    def __init__(self):
+        super().__init__()
+        self.title('Second Display') 
+    
 class AudioRecorderApp:
     def __init__(self, master):
         self.master = master
@@ -139,9 +144,8 @@ class AudioRecorderApp:
         self.play_start_time = 0
         self.paused_position = 0
         self.playback_frame = None
+        self.flag = 1
 
-        #self.master.attributes('-topmost', True)
-        #self.seek_bar.bind("<ButtonRelease-1>", lambda event: self.seek_to_position(self.seek_bar.get()))
     def setup_menu(self):
         # Create menu
         # Add a menu bar for CSV handling
@@ -152,11 +156,6 @@ class AudioRecorderApp:
         self.filemenu.add_command(label="Load CSV", command=self.load_csv)
         self.menubar.add_cascade(menu=self.filemenu, label="File")
         
-        # # Adding new menu
-        # self.optionsmenu = tk.Menu(self.menubar, tearoff=0)
-        # self.optionsmenu.add_command(label="Select Date and Options", command=self.show_date_and_options_ui)
-        # self.menubar.add_cascade(menu=self.optionsmenu, label="Options")
-        # # Attach the menu bar to the master window
         self.master.config(menu=self.menubar)   
 
 
@@ -196,14 +195,81 @@ class AudioRecorderApp:
         
         # Update dropdown options
         self.microphone_dropdown['values'] = microphone_options
-    
-    def create_widgets(self):
 
+    def create_second_window(self):
+        global second_window
+        second_window = Extra()
+        if hasattr(self, 'second_window') and second_window.winfo_exists():
+            second_window.lift()  
+            return
         
+        second_window.protocol("WM_DELETE_WINDOW", self.on_secondary_window_close)
+        self.toggle_window_btn.config(text="Close Window2")
+        display_frame=ttk.Frame(second_window)
+        display_frame.pack(pady=20,padx=20)
+        self.display_text_id=ttk.Entry(display_frame, font=('Times New Roman', 18, 'bold'), width=24, bootstyle="danger")
+        self.display_text_id.pack(pady=(16, 0))
+        self.display_text_id.insert(0, self.text_id.get())
+        self.display_text_sentence = tk.Text(display_frame, height=3, width=65, wrap="word", font=('Arial Unicode MS', 20), spacing1=10, spacing2=10, spacing3=10)
+        self.display_text_sentence.pack(pady=20, padx=10) 
+        self.display_text_sentence.insert("1.0", self.text_sentence.get("1.0", tk.END)) 
+        self.text_id.bind('<KeyRelease>', self.sync_text_id)
+        self.display_text_id.bind('<KeyRelease>', self.sync_display_text_id)
+
+        self.text_sentence.bind('<KeyRelease>', self.sync_text_sentence)
+        self.display_text_sentence.bind('<KeyRelease>', self.sync_display_text_sentence)
+       
+    def toggle_secondary_window(self):
+        # if hasattr(self, 'second_window'):
+        #     if second_window.winfo_exists():
+        #         second_window.destroy()
+        #         self.toggle_window_btn.config(text="Open Window2")
+        #         print("Here 1")
+        #     else:
+        #         print("Here 2")
+        #         self.create_second_window()
+        #         self.toggle_window_btn.config(text="Close Window2")
+        # else:
+        #     print("Here 3")
+        #     self.create_second_window()
+        #     self.toggle_window_btn.config(text="Close Window2")
+        if self.flag == 1:
+            self.create_second_window()
+            self.flag = 0
+            self.toggle_window_btn.config(text="Close Window2")
+        else:
+            second_window.destroy()
+            self.flag = 1
+            self.toggle_window_btn.config(text="Open Window2")
+ 
+    def on_secondary_window_close(self):
+        print("Here 4")
+        second_window.destroy()
+        self.flag = 1
+        self.toggle_window_btn.config(text="Open Window2")
+    
+    # def close_window(self):
+    #     second_window.destroy()
+        
+    def sync_text_id(self, event=None):
+        self.display_text_id.delete(0, tk.END)
+        self.display_text_id.insert(0, self.text_id.get())
+
+    def sync_display_text_id(self, event=None):
+        self.text_id.delete(0, tk.END)
+        self.text_id.insert(0, self.display_text_id.get())
+
+    def sync_text_sentence(self, event=None):
+        self.display_text_sentence.delete("1.0", tk.END)
+        self.display_text_sentence.insert("1.0", self.text_sentence.get("1.0", tk.END))
+
+    def sync_display_text_sentence(self, event=None):
+        self.text_sentence.delete("1.0", tk.END)
+        self.text_sentence.insert("1.0", self.display_text_sentence.get("1.0", tk.END))
+    
+    def create_widgets(self):        
         self.master.minsize(width=1536, height=480)  # Set the minimum size of the window
 
-        #self.setup_dropdowns()
-        
         drop_frame = ttk.Frame(self.master)
         drop_frame.pack(pady =(0,10))
 
@@ -238,7 +304,6 @@ class AudioRecorderApp:
         self.submit_btn = tk.Button(drop_frame, text="Submit", command=self.on_submit)
         self.submit_btn.pack(pady=(40, 0), padx = 30, side = tk.LEFT)
 
-
         main_frame = ttk.Frame(self.master)
         main_frame.pack(pady= (30, 0),expand=False)
 
@@ -247,7 +312,6 @@ class AudioRecorderApp:
 
         self.total_aud_duration = ttk.Label(main_frame, text=f"Total Duration: {self.duration} minutes", font=('Times New Roman', 18, 'bold'), width=24, bootstyle="success", foreground= '#0D2740')
         self.total_aud_duration.pack()
-        
 
         self.text_id = ttk.Entry(main_frame, font=('Times New Roman', 18, 'bold'), width=24, bootstyle="danger")
         self.text_id.bind('<Return>', self.load_entry_from_id)
@@ -260,17 +324,14 @@ class AudioRecorderApp:
         self.text_sentence.insert("1.0", "Please use the load CSV option in the File menu to display the sentence.")
         style = ttk.Style()
         style.configure('NoBorder.TButton', borderwidth=0, highlightthickness=0)
-        style.map('NoBorder.TButton', foreground = [('disabled','#0D2740'), (('active', 'blue'))])
-        
-        # style.configure('danger.TButton', font=('Helvetica', 60), padding=30) # Modify font size and padding as needed
-        
+        style.map('NoBorder.TButton', foreground = [('disabled','#0D2740'), (('active', 'blue'))])      
 
         # Frame for buttons
         buttons_frame = ttk.Frame(main_frame)
         buttons_frame.pack(pady=0, expand= True)
-        
-   
-        
+        sec_buttons_frame = ttk.Frame(main_frame)
+        sec_buttons_frame.pack(pady=2, expand= True)
+ 
 #######################################################################################################################################
         def resource_path(relative_path):
             """ Get the absolute path to the resource, works for dev and for PyInstaller """
@@ -291,7 +352,13 @@ class AudioRecorderApp:
             button = ttk.Button(frame, image=img, command=command, style=style)
             button.image = img  
             return button
-
+        
+        self.toggle_window_btn = ttk.Button(self.master, text="Open Window2", command=self.toggle_secondary_window, style='NoBorder.TButton')
+        self.toggle_window_btn.pack(side=tk.LEFT, padx=32, pady=4)
+        # self.open_secondary_window_btn = ttk.Button(sec_buttons_frame, text="Open Window2", command=self.create_second_window, style='NoBorder.TButton')
+        # self.open_secondary_window_btn.pack(side=tk.LEFT, padx=32,pady = 4)
+        # self.close_secondary_window_btn = ttk.Button(sec_buttons_frame, text="Close Window2", command=self.close_window, style='NoBorder.TButton')
+        # self.close_secondary_window_btn.pack(side=tk.LEFT, padx=32,pady = 4)
         self.btn_play = create_button_with_image(buttons_frame, resource_path('static_files/icons8-circled-play-96.png'), self.play_audio_file, style='NoBorder.TButton')
         self.btn_stop = create_button_with_image(buttons_frame, resource_path('static_files/icons8-stop-96.png'), self.stop_recording_or_playing, style='NoBorder.TButton')
         self.btn_record = create_button_with_image(buttons_frame, resource_path('static_files/icons8-microphone-100.png'), self.start_recording, style='NoBorder.TButton')
@@ -299,17 +366,6 @@ class AudioRecorderApp:
         self.btn_previous = create_button_with_image(buttons_frame, resource_path('static_files/icons8-previous-96.png'), self.previous_sentence, style='NoBorder.TButton')
         self.btn_next = create_button_with_image(buttons_frame, resource_path('static_files/icons8-last-96.png'), self.next_sentence, style='NoBorder.TButton')
        
-    
-        # self.btn_play.pack(side=tk.LEFT, padx=32, pady=5)
-
-        # self.audio_var = tk.StringVar()
-        # self.audiotype_dropdown = ttk.Combobox(self.master, values=audio_types, width= 35)
-        # self.audiotype_dropdown.pack(pady=20, padx=15, side= LEFT)
-        # self.audiotype_dropdown.place(x = 30, y = 350)
-        # self.audiotype_dropdown.set('Select audio format to listen the recorded audio')
-
-
-        # self.plyback_btn = ttk.Button(buttons_frame, text= 'play selected format audio', command= self.playback_recorded_audio, style= 'my.TButton', bootstyle='secondary')
         self.btn_previous.pack(side=tk.LEFT, padx=32,pady = 2)
         self.btn_record.pack(side=tk.LEFT, padx=32,pady = 2)
         self.btn_stop.pack(side=tk.LEFT, padx=32,pady = 2)
@@ -320,23 +376,8 @@ class AudioRecorderApp:
         self.master.bind("<Control-n>", lambda event: self.next_sentence())
         self.master.bind("<Control-p>", lambda event: self.previous_sentence())
 
-#        self.master.bin
-
 ########################################################################################################################################
-        # self.btn_record = ttk.Button(buttons_frame, text="🔴", command=self.start_recording, style='my.TButton', bootstyle='danger', font=emoji_font)
-        # self.btn_record.pack(side=tk.LEFT, padx=32, pady=5)
 
-        # self.btn_save = ttk.Button(buttons_frame, text="💾", command=self.save_audio, style='my.TButton', bootstyle='warning')
-        # self.btn_save.pack(side=tk.LEFT, padx=32, pady=5)
-
-        # self.btn_previous = ttk.Button(buttons_frame, text="⏮️", command=self.previous_sentence, style='my.TButton', bootstyle='info')
-        # self.btn_previous.pack(side=tk.LEFT, padx=32, pady=5)
-
-        # self.btn_next = ttk.Button(buttons_frame, text="⏭️", command=self.next_sentence, style='my.TButton', bootstyle='info')
-        # self.btn_next.pack(side=tk.LEFT, padx=32, pady=5)
-    
-        # self.btn_skip = ttk.Button(buttons_frame, text="⏭️⏭️", command=self.skip_sentence)  # Use appropriate skip icon
-        # self.btn_skip.pack(side=tk.LEFT, **padding)
       
     def load_entry_from_id(self, event=None):
         entered_id = self.text_id.get().strip()          
@@ -389,6 +430,12 @@ class AudioRecorderApp:
             self.text_sentence.delete("1.0", tk.END)
             self.text_sentence.insert("1.0", "Please load a CSV file to display entries.")
 
+        if hasattr(self, 'display_text_sentence'):
+            self.display_text_id.delete(0, tk.END)
+            self.display_text_id.insert(0, str(current_row['ID']))
+            self.display_text_sentence.delete("1.0", tk.END)
+            self.display_text_sentence.insert("1.0", str(current_row['Sentence']))
+
     def select_and_save_csv(self):
         filepath = fd.askopenfilename(filetypes=[("Upload TRANSCRIPT", "*.csv")])
         if not filepath:
@@ -429,57 +476,6 @@ class AudioRecorderApp:
             self.popup_message('No audio to play!', 1000)
             if self.playback_frame is not None:
                self.playback_frame.destroy()
-       # wf = wave.open(filename, 'rb')
-        # p = pyaudio.PyAudio()
-        # if self.audio_recorder.frames_48000 is None:
-        #    self.popup_message('Warning! No audio to play!!')
-        # else:  
-        #     playback_stream = p.open(format=pyaudio.paInt16, channels=1, rate=48000, output=True, input_device_index= int(self.microphone_dropdown.get().split(' ')[1].replace(':', '')))         
-        #     try:
-        #         # Write the recorded frames to the playback stream
-        #         for data in self.audio_recorder.frames_48000:
-        #             #print(data)
-        #             playback_stream.write(data)
-        #     except KeyboardInterrupt:
-        #         print('Keyboard interruption during playback')
-        #     finally:
-        #         # Stop and close the playback stream
-        #         playback_stream.stop_stream()
-        #         playback_stream.close()
-        
-        #     p.terminate()
-        # self.playback_seekbar()
-        #pass
-
-    # def playback_recorded_audio(self):
-    #     #frames = []
-    #     #print(self.audiotype_dropdown.get())
-    #     if self.audiotype_dropdown.get().strip() == '48khz':
-    #         frames = self.audio_recorder.frames_48000 
-    #         rate = 48000
-    #     elif self.audiotype_dropdown.get().strip() == '8khz':
-    #         frames = self.audio_recorder.frames_8000
-    #         rate = 8000
-    #     elif self.audiotype_dropdown.get().strip() == 'Select audio format to listen the recorded audio' or self.audiotype_dropdown.get() not in ['48khz', '8khz']:
-    #         messagebox.showerror('Error!', 'Please select a valid audio format')
-    #     print(rate)
-    #     print(frames)
-    #     if True:
-    #         print(rate)
-    #      # Open an output stream
-    #         self.audio = pyaudio.PyAudio()
-    #         playback_stream = self.audio.open(format=pyaudio.paInt16, channels=1, rate=rate, output=True, input_device_index= int(self.microphone_dropdown.get().split(' ')[1].replace(':', '')))
-    #         try:
-    #             # Write the recorded frames to the playback stream
-    #             for data in frames:
-    #                 #print(data)
-    #                 playback_stream.write(data)
-    #         except KeyboardInterrupt:
-    #             print('Keyboard interruption during playback')
-    #         finally:
-    #             # Stop and close the playback stream
-    #             playback_stream.stop_stream()
-    #             playback_stream.close()
 
     def start_recording(self, event=None):
         self.audio_recorder.frames_48000=[]
@@ -494,19 +490,7 @@ class AudioRecorderApp:
     def stop_recording_or_playing(self , event = None):
         self.audio_recorder.stop_recording()
         self.popup_message('Recording stopped')
-        self.playback_seekbar()
-        # if event == None:
-        #     print('*')
-        # elif event != None:
-        #     #print('entered if cond')
-        #     key = event.keysym
-        #     if key == 'space':
-        #         self.audio_recorder.stop_recording()
-        #         self.popup_message('Recording stopped')
-        # elif button_click == True:
-        #     self.audio_recorder.stop_recording()
-        #     self.popup_message('Recording stopped')
-     
+        self.playback_seekbar()    
 
     def save_audio(self):
         id = self.text_id.get()
@@ -643,27 +627,10 @@ class AudioRecorderApp:
         return "{:02}:{:02}".format(int(minutes), int(seconds))
 
     def play_audio(self):
-            
-        # if not self.start:
-        #     self.player.play()
-        #     self.start = True
-        #     self.play_start_time = time.time()
-        #     # self.start = False
-        ## elif self.start:
-        #     print('audio played already once.. trying to seek from 0.1')
-        #     self.player.seek(0.1)
-        #     self.player.play()
-        #     self.play_start_time = time.time()
         self.player.seek(0.1)
         self.player.play()
         self.play_start_time = time.time()
         self.start = True
-
-        #     self.player.play()
-        #     self.play_start_time = time.time()
-            # self.resume_button.config(state=tk.NORMAL)
-            # self.pause_button.config(state=tk.NORMAL)
-        # self.start = False
 
 
     def pause_audio(self):
@@ -759,35 +726,6 @@ class AudioRecorderApp:
 
         self.master.after(100, self.update_seek_bar)
 
-        # if not self.resumed and not self.paused and not self.seek and self.start:
-        #     self.current_time = (time.time() - self.play_start_time)
-        #     self.seek_bar.set(self.current_time)
-        # elif self.paused: 
-        #     self.seek_bar.set(self.current_time)
-        # elif self.resumed :
-        # # Update current_time to the paused position
-        #     if self.current_time < self.audio_duration:
-        #         self.current_time += 0.1
-        #         print('new current time: ',self.current_time)
-        #         self.seek_bar.set(self.current_time)
-        #         self.current_time= self.seek_bar.get()
-        #     else:
-        #         self.stop_audio()
-        #         self.resumed = False
-        # elif self.seek:
-        #     if self.current_time < self.audio_duration:
-        #         self.current_time += 0.1
-        #         print('new current time: ',self.current_time)
-        #         self.seek_bar.set(self.current_time)
-        #         self.current_time= self.seek_bar.get()
-        #     else:
-        #         self.stop_audio()
-        #         self.resumed = False
-        
-        #self.master.after(100, self.update_seek_bar)
-
-
-
     def plot_waveform(self):
         
         # pass
@@ -795,11 +733,7 @@ class AudioRecorderApp:
         dbfs_frames = [frame.dBFS for frame in self.seg]
         print(len(self.np_data))
         time_in_sec = np.linspace(0, self.audio_duration, len(self.np_data))
-        # fig = plt.figure(figsize=(8, 2))
-        # plt.plot(dbfs_frames, color='blue')
-        # plt.xlabel('Time (samples)')
-        # plt.ylabel('Amplitude (dB)')
-        # plt.title('Waveform in Decibels')
+
         if hasattr(self, 'canvas2'):
             self.canvas2.get_tk_widget().destroy()
         fig2 = plt.figure(figsize=(8,3))
@@ -810,10 +744,7 @@ class AudioRecorderApp:
         plt.ylabel('Amplitude')
         #plt.title('Waveform')
         plt.tight_layout()
-        # plt.show()
-        # canvas = FigureCanvasTkAgg(fig, master=self.playback_frame)
-        # canvas.draw()
-        # canvas.get_tk_widget().pack()
+
         self.canvas2 = FigureCanvasTkAgg(fig2, master=self.playback_frame)
         self.canvas2.draw()
         self.canvas2.get_tk_widget().pack(pady=(10,0))
@@ -822,19 +753,10 @@ class AudioRecorderApp:
 def main():
     
     root = ttkb.Window(themename='flatly') # Main/Parent Window - Offers access to geometric configuration of widgets.
-    #root.attributes('-fullscreen', True)
     app = AudioRecorderApp(root)
     root.bind('<Key-asterisk>', lambda event: app.start_recording())
     root.bind('<space>', lambda event: app.stop_recording_or_playing(event))
-    
-    
-    # pyglet.app.run()
     root.mainloop() # infinite loop, waits for an event to occur and process the event until window closed.
     
 if __name__ == "__main__":
     main()
-
-
-# pyglet.media.Source(audio_format = )
-
-#C:\Users\richa\Downloads\TTS_DC\recording-app\PyAudio-recorder\data\DEMO\Male\FEAR\04-04-2024\8khz\DEMO_M_ANGER_05543.wav
