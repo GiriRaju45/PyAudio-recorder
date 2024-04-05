@@ -514,31 +514,34 @@ class AudioRecorderApp:
         filename = f"{id}.wav" 
 
         audio_duration = self.audio_recorder.save_recording(filename, self.audio_dir)
-        file_path = os.path.join(self.audio_dir,'48khz', filename)
+        file_path_48khz = os.path.join(self.audio_dir,'48khz', filename)
+        file_path_8khz = os.path.join(self.audio_dir,'8khz', filename)
 
         data = {               
             "easy_id": self.current_date,
             "Sentence": sentence,
             "speaker": self.current_speaker,
             "language": self.current_language,
-            "style": self.current_language,
+            "style": self.current_style,
             "category": self.current_category,
             "data_id": id
         }
-        with open(file_path, 'rb') as audio_file:
-            files = {
-                'audio_file': (filename, audio_file, 'audio/wav')
-            }
-            response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
-            
+        
+        files = {
+            'audio_file_48khz': (filename, open(file_path_48khz,'rb'), 'audio/wav'),
+            'audio_file_8khz': (filename, open(file_path_8khz,'rb'), 'audio/wav'),
+        }
+        response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
+        files['audio_file_48khz'][1].close()
+        files['audio_file_8khz'][1].close()
         if response.ok:
             self.count += 1
             self.duration += round(audio_duration/60000, 2)
-            print("Successfully uplaoded the audio file and metadata.")
+            print("Successfully uploaded the audio file and metadata.")
             self.audio_count.config(text=f"Audio Count: {self.count}")
             self.total_aud_duration.config(text=f"Duration: {self.duration} minutes") 
         else:
-            print(f"Failed to upload hte audio file. Status code: {response.status_code}, Response: {response.text}")
+            print(f"Failed to upload the audio file. Status code: {response.status_code}, Response: {response.text}")
         if audio_duration is None:
             self.popup_message('Error! No audio to save!!', destroy_duration= 2000)
         else:
@@ -833,3 +836,5 @@ if __name__ == "__main__":
 
 
 # pyglet.media.Source(audio_format = )
+
+#C:\Users\richa\Downloads\TTS_DC\recording-app\PyAudio-recorder\data\DEMO\Male\FEAR\04-04-2024\8khz\DEMO_M_ANGER_05543.wav
