@@ -184,7 +184,7 @@ class CustomProgressBar(ttk.Frame):
 
         
         self.progress = ttk.Progressbar(self, orient="horizontal", length=1200, mode="determinate", maximum= 50)
-        self.progress.pack(side= 'bottom', expand=False, ipady=20)
+        self.progress.pack(side= 'bottom', expand=False, ipady=40)
 
         db_style = ttk.Style()
         #db_style.theme_use('default')
@@ -907,7 +907,7 @@ class AudioRecorderApp:
         self.axes = plt.axes()
         # plt.figure(figsize=(8, 2))
         self.axes.set_xlim(0, right= self.audio_duration)
-        plt.axhline(y = 17050, color = 'r', linestyle = '--')
+        plt.axhline(y = 17800, color = 'r', linestyle = '--')
         plt.plot(time_in_sec, self.np_data, color='#0D2740')
         plt.xlabel('Time (seconds)', fontdict= font1)
         plt.ylabel('Amplitude', fontdict= font1)
