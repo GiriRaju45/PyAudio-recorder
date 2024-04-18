@@ -907,7 +907,7 @@ class AudioRecorderApp:
         self.axes = plt.axes()
         # plt.figure(figsize=(8, 2))
         self.axes.set_xlim(0, right= self.audio_duration)
-        plt.axhline(y = 17800, color = 'r', linestyle = '--')
+        #plt.axhline(y = 17800, color = 'r', linestyle = '--')
         plt.plot(time_in_sec, self.np_data, color='#0D2740')
         plt.xlabel('Time (seconds)', fontdict= font1)
         plt.ylabel('Amplitude', fontdict= font1)
