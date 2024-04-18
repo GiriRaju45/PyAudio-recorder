@@ -658,7 +658,7 @@ class AudioRecorderApp:
 
         audio_duration = self.audio_recorder.save_recording(filename, self.audio_dir)
         file_path_48khz = os.path.join(self.audio_dir,'48khz', filename)
-        file_path_8khz = os.path.join(self.audio_dir,'8khz', filename)
+        # file_path_8khz = os.path.join(self.audio_dir,'8khz', filename)
 
         data = {               
             "easy_id": self.current_date,
@@ -672,11 +672,11 @@ class AudioRecorderApp:
         
         files = {
             'audio_file_48khz': (filename, open(file_path_48khz,'rb'), 'audio/wav'),
-            'audio_file_8khz': (filename, open(file_path_8khz,'rb'), 'audio/wav'),
+            # 'audio_file_8khz': (filename, open(file_path_8khz,'rb'), 'audio/wav'),
         }
         response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
         files['audio_file_48khz'][1].close()
-        files['audio_file_8khz'][1].close()
+        # files['audio_file_8khz'][1].close()
         if response.ok:
             self.count += 1
             self.duration += round(audio_duration/60000, 2)
