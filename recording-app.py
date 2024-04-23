@@ -736,8 +736,9 @@ class AudioRecorderApp:
             self.seg.export('temp.wav', format= 'wav') 
             self.audio_data = pyglet.media.load('temp.wav', streaming= False)
         self.player = pyglet.media.Player()
-        # self.player.loop = True
+        print('before loading audio', self.player.volume) # self.player.loop = True
         self.player.queue(self.audio_data)
+        print('after loading audio: ',self.player.volume)
         self.player.on_eos = self.player.pause()
         #self.player.loop = True
         # self.player.loop = True
@@ -748,6 +749,7 @@ class AudioRecorderApp:
         self.stop = False
         self.audio_duration = self.seg.duration_seconds
         self.plot_waveform()
+       
        # self.fig2.
         # scale_length = int(self.fig2.get_size_inches()[0] * self.playback_frame.winfo_fpixels('1i'))
         # scale_length = self.canvas2.get_tk_widget().winfo_reqwidth()
