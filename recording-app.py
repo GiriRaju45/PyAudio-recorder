@@ -166,7 +166,7 @@ class CustomProgressBar(ttk.Frame):
     def __init__(self, master=None, **kw):
         super().__init__(master, **kw)
 
-        self.canvas = tk.Canvas(self, width=1204, height=20, highlightthickness=0)
+        self.canvas = tk.Canvas(self, width=1204, height=50, highlightthickness=0)
         self.canvas.pack(side='top', fill='x', padx= 5)
 
         # Draw the scale with numbers from -50 to 0
@@ -181,7 +181,7 @@ class CustomProgressBar(ttk.Frame):
 
         
         self.progress = ttk.Progressbar(self, orient="horizontal", length=1200, mode="determinate", maximum= 50)
-        self.progress.pack(side= 'bottom', expand=False, ipady=15)
+        self.progress.pack(side= 'bottom', expand=False, ipady=35)
 
         db_style = ttk.Style()
         #db_style.theme_use('default')
