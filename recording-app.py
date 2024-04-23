@@ -6,7 +6,6 @@ from ttkbootstrap.constants import *
 import pandas as pd
 import numpy as np
 import time 
-import math
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import pyaudio
@@ -136,9 +135,7 @@ class Extra(tk.Toplevel):
     def __init__(self):
         super().__init__()
         self.title('Second Display') 
-        # tp_style = ttk.Style()
-        # tp_style.theme_use('clam')
-        
+
 #################################################################################   
 # class CustomProgressBar(tk.Canvas):
 #     def __init__(self, master=None, **kwargs):
@@ -169,7 +166,7 @@ class CustomProgressBar(ttk.Frame):
     def __init__(self, master=None, **kw):
         super().__init__(master, **kw)
 
-        self.canvas = tk.Canvas(self, width=1204, height=55, highlightthickness=0)
+        self.canvas = tk.Canvas(self, width=1204, height=50, highlightthickness=0)
         self.canvas.pack(side='top', fill='x', padx= 5)
 
         # Draw the scale with numbers from -50 to 0
@@ -179,12 +176,12 @@ class CustomProgressBar(ttk.Frame):
                 i = ''
             else:
                 x = (i + 50) * 1200 / 50
-            self.canvas.create_text(x, 30, text=str(i), anchor='n', fill = '#B8B8B8')#'' )
+            self.canvas.create_text(x, 30, text=str(i), anchor='n', fill = '#B8B8B8')#'#FA5252')
 
 
         
         self.progress = ttk.Progressbar(self, orient="horizontal", length=1200, mode="determinate", maximum= 50)
-        self.progress.pack(side= 'bottom', expand=False, ipady=40)
+        self.progress.pack(side= 'bottom', expand=False, ipady=30)
 
         db_style = ttk.Style()
         #db_style.theme_use('default')
@@ -192,21 +189,17 @@ class CustomProgressBar(ttk.Frame):
         db_style.configure('yellow.Horizontal.TProgressbar', foreground='yellow', background='yellow')
         db_style.configure('red.Horizontal.TProgressbar', foreground='red', background='red')
 
-    def update_color(self, x, seg = None):
+    def update_color(self, x):
         x = max(-50, x)
-        value = 50 - abs(int(x))
+        value = 50 - abs(x)
         # print(value)
-        if 0 <= value < 22:
+        if 0 <= value <= 22:
             self.progress['style'] = 'green.Horizontal.TProgressbar'
-        elif 22 <= value < 38:
+        elif 22 < value <= 38:
             self.progress['style'] = 'yellow.Horizontal.TProgressbar'
-        elif 38 <= value <= 50:
+        elif 38 < value <= 50:
             self.progress['style'] = 'red.Horizontal.TProgressbar'
-            print('value in the dB bar: ', value)
-            print(x)
-            print(seg.get_array_of_samples())
-            print('Maximum Amp: ',max(seg.get_array_of_samples()))
-    
+
     def reset_progress(self):
         self.update_color(-50)
         self.update()
@@ -292,7 +285,6 @@ class AudioRecorderApp:
     def create_second_window(self):
         global second_window
         second_window = Extra()
-        
         if hasattr(self, 'second_window') and second_window.winfo_exists():
             second_window.lift()  
             return
@@ -301,10 +293,10 @@ class AudioRecorderApp:
         self.toggle_window_btn.config(text="Close Window2")
         display_frame=ttk.Frame(second_window)
         display_frame.pack(pady=20,padx=20)
-        self.display_text_id=ttk.Entry(display_frame, font=('Times New Roman', 18, 'bold'), width=24, background = 'white')
+        self.display_text_id=ttk.Entry(display_frame, font=('Times New Roman', 18, 'bold'), width=24, bootstyle="danger")
         self.display_text_id.pack(pady=(16, 0))
         self.display_text_id.insert(0, self.text_id.get())
-        self.display_text_sentence = tk.Text(display_frame, height=3, width=65, wrap="word", font=('Arial Unicode MS', 20), spacing1=10, spacing2=10, spacing3=10, bg= 'white')
+        self.display_text_sentence = tk.Text(display_frame, height=3, width=65, wrap="word", font=('Arial Unicode MS', 20), spacing1=10, spacing2=10, spacing3=10)
         self.display_text_sentence.pack(pady=20, padx=10) 
         self.display_text_sentence.insert("1.0", self.text_sentence.get("1.0", tk.END)) 
         self.text_id.bind('<KeyRelease>', self.sync_text_id)
@@ -365,11 +357,8 @@ class AudioRecorderApp:
         self.master.minsize(width=1536, height=480)  # Set the minimum size of the window
 
         drop_frame = ttk.Frame(self.master)
-        drop_frame.pack(pady =(0,5))
+        drop_frame.pack(pady =(0,10))
 
-        self.toggle_window_btn = ttk.Button(self.master, text="Open Window2", command=self.toggle_secondary_window, style='NoBorder.TButton')
-        #self.toggle_window_btn.pack(side='left', pady=(0, 50), padx= (20,0))
-        self.toggle_window_btn.place(x = 20, y=150)
         self.my_date = ttkb.DateEntry(drop_frame, bootstyle="flatly")
         self.my_date.pack(pady=(40, 0), padx = 30, side = tk.LEFT)
 
@@ -401,10 +390,8 @@ class AudioRecorderApp:
         self.submit_btn = tk.Button(drop_frame, text="Submit", command=self.on_submit)
         self.submit_btn.pack(pady=(40, 0), padx = 30, side = tk.LEFT)
 
-
         main_frame = ttk.Frame(self.master)
         main_frame.pack(pady= (30, 0),expand=False)
-
 
         self.audio_count = ttk.Label(main_frame, text=f"Audio Count: {self.count}", font=('Times New Roman', 18, 'bold'), width=24, bootstyle="success", foreground= '#FA5252')
         self.audio_count.pack()
@@ -419,7 +406,7 @@ class AudioRecorderApp:
         bold_font = ('Arial Unicode MS', 20)  # Using 'Arial Unicode MS' for better Unicode character support
         self.text_sentence = tk.Text(main_frame, height=3, width=65, wrap="word", font=bold_font, spacing1=10, spacing2=10, spacing3=10)
         self.text_sentence.tag_configure("center", justify='center')
-        self.text_sentence.pack(pady=20, padx=(20,10))  # Padding on sides for the Text widget
+        self.text_sentence.pack(pady=20, padx=10)  # Padding on sides for the Text widget
         self.text_sentence.insert("1.0", "Please use the load CSV option in the File menu to display the sentence.")
         style = ttk.Style()
         style.configure('NoBorder.TButton', borderwidth=0, highlightthickness=0)
@@ -452,25 +439,23 @@ class AudioRecorderApp:
             button.image = img  
             return button
         
-        # self.toggle_window_btn = ttk.Button(self.master, text="Open Window2", command=self.toggle_secondary_window, style='NoBorder.TButton')
-        # self.toggle_window_btn.pack(side=tk.LEFT, padx=(20,0), pady=4)
+        self.toggle_window_btn = ttk.Button(self.master, text="Open Window2", command=self.toggle_secondary_window, style='NoBorder.TButton')
+        self.toggle_window_btn.pack(side=tk.LEFT, padx=(20,0), pady=4)
         # self.open_secondary_window_btn = ttk.Button(sec_buttons_frame, text="Open Window2", command=self.create_second_window, style='NoBorder.TButton')
         # self.open_secondary_window_btn.pack(side=tk.LEFT, padx=32,pady = 4)
         # self.close_secondary_window_btn = ttk.Button(sec_buttons_frame, text="Close Window2", command=self.close_window, style='NoBorder.TButton')
         # self.close_secondary_window_btn.pack(side=tk.LEFT, padx=32,pady = 4)
-        self.btn_play = create_button_with_image(buttons_frame, resource_path('static_files/icons8-circled-play-96.png'), self.play_audio_file, style='NoBorder.TButton')
-        self.btn_stop = create_button_with_image(buttons_frame, resource_path('static_files/icons8-stop-96.png'), self.stop_recording_or_playing, style='NoBorder.TButton')
+        self.btn_play = create_button_with_image(buttons_frame, resource_path('static_files/icons8-play-button-100.png'), self.play_audio_file, style='NoBorder.TButton')
+        self.btn_stop = create_button_with_image(buttons_frame, resource_path('static_files/icons8-stop-100.png'), self.stop_recording_or_playing, style='NoBorder.TButton')
         self.btn_record = create_button_with_image(buttons_frame, resource_path('static_files/icons8-microphone-100.png'), self.start_recording, style='NoBorder.TButton')
-        self.btn_save = create_button_with_image(buttons_frame, resource_path('static_files/icons8-save-button-96.png'), self.save_audio, style='NoBorder.TButton')
-        self.btn_previous = create_button_with_image(buttons_frame, resource_path('static_files/icons8-previous-96.png'), self.previous_sentence, style='NoBorder.TButton')
-        self.btn_next = create_button_with_image(buttons_frame, resource_path('static_files/icons8-last-96.png'), self.next_sentence, style='NoBorder.TButton')
-
-        
-        
+        self.btn_save = create_button_with_image(buttons_frame, resource_path('static_files/icons8-save-button-100.png'), self.save_audio, style='NoBorder.TButton')
+        self.btn_previous = create_button_with_image(buttons_frame, resource_path('static_files/icons8-previous-96-2.png'), self.previous_sentence, style='NoBorder.TButton')
+        self.btn_next = create_button_with_image(buttons_frame, resource_path('static_files/icons8-last-100.png'), self.next_sentence, style='NoBorder.TButton')
+       
         self.btn_previous.pack(side=tk.LEFT, padx=32,pady = 2)
+        self.btn_play.pack(side=tk.LEFT, padx=32,pady = 2)
         self.btn_record.pack(side=tk.LEFT, padx=32,pady = 2)
         self.btn_stop.pack(side=tk.LEFT, padx=32,pady = 2)
-        self.btn_play.pack(side=tk.LEFT, padx=32,pady = 2)
         self.btn_save.pack(side=tk.LEFT, padx=32,pady = 2)
         self.btn_next.pack(side=tk.LEFT, padx=32,pady = 2)
         self.master.bind("<Control-s>", lambda event: self.save_audio())
@@ -589,10 +574,6 @@ class AudioRecorderApp:
             self.popup_message('ERROR!! please select the style, language and speak to create the respective folder before starting to  record', destroy_duration= 4000)
         else:
             index = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
-            if self.playback_frame is not None:
-               self.playback_frame.destroy()
-            if hasattr(self, 'canvas2'):
-                self.canvas2.get_tk_widget().destroy()
             self.popup_message('Recording started!!')
             self.audio_recorder.start_recording(device_index=index)
             print(self.audio_recorder.is_recording)
@@ -603,7 +584,7 @@ class AudioRecorderApp:
                                 frames_per_buffer=512,
                                 input_device_index= index)
             
-            self.update_db_value = self.master.after(50, self.update_db_level)
+            self.update_db_value = self.master.after(75, self.update_db_level)
 
             # self.db_thread = threading.Thread(target= self._record_db_stream, args= (self.db_stream,))
             # self.db_thread.start()
@@ -614,24 +595,53 @@ class AudioRecorderApp:
             try:
                 data = self.db_stream.read(512, exception_on_overflow=False)
                 seg = AudioSegment(b''.join([data]), sample_width=2, channels=1, frame_rate=48000)
-                db_value = seg.dBFS
-                print(db_value)
-                # samples = seg.get_array_of_samples()
-                # rms = np.sqrt(np.mean(np.square(samples)))
-                # cal_db  = 20*math.log10(rms/32767)
-                # print(cal_db)
-                db_value = max(db_value, -50)
-                value = 50 - abs(int(db_value))
-                self.db_level.update_color(db_value, seg = seg)
+                print(len(seg))
+                
+                print(seg.dBFS)
+                db_value = int(seg.dBFS)
+                if db_value == -np.inf:
+                    db_value = -50
+                value = 50 - abs(db_value)
+                self.db_level.update_color(db_value)
                 self.db_level.progress['value'] = value
-                self.update_db_value = self.master.after(50, self.update_db_level)
+                # Schedule the next update after 100ms
+                #time.sleep(0.1)
+                #self.db_level.delete('progress')
+                self.update_db_value = self.master.after(75, self.update_db_level)
                 
             except Exception as e:
                 print("Error while updating DB level:", e)
 
+
+    # def _record_db_stream(self, stream):
+    #     print('called function')
+    #     while self.audio_recorder.is_recording:
+    #         print('started_rec')
+    #         try:
+    #             data = stream.read(512, exception_on_overflow=False)
+    #             #print('data: ', data)
+    #             seg = AudioSegment(b''.join([data]), sample_width = 2, channels = 1, frame_rate = 48000)
+    #             for fr in seg:
+    #                 print(fr.dBFS)
+    #                 #threading.Thread(target= self.db_level.update_progress, args=(int(fr.dBFS),)).start()
+    #         #         self.update_db_level(int(fr.dBFS))
+    #         except:
+    #             KeyboardInterrupt
+    #             return
+        # set the bar to the silence level dBFS
+        # elif not self.audio_recorder.is_recording:
+        #     self.update_db_level(-50)
+        #     print('setting the db to the -50/ silence')
+        #     self.master.after_cancel(self.update_db_level)
+        #     print('cancelled the dB update')
+        #     return
    
     def stop_recording_or_playing(self , event = None):
         self.audio_recorder.stop_recording()
+        # self.db_thread.join()
+        # self.db_stream.stop_stream()
+        # self.db_stream.close()
+        # self.db_pyaud_instance.terminate()
         if self.db_stream.is_active():
             self.db_stream.stop_stream()
         self.db_stream.close()
@@ -648,7 +658,7 @@ class AudioRecorderApp:
 
         audio_duration = self.audio_recorder.save_recording(filename, self.audio_dir)
         file_path_48khz = os.path.join(self.audio_dir,'48khz', filename)
-        file_path_8khz = os.path.join(self.audio_dir,'8khz', filename)
+        # file_path_8khz = os.path.join(self.audio_dir,'8khz', filename)
 
         data = {               
             "easy_id": self.current_date,
@@ -662,11 +672,11 @@ class AudioRecorderApp:
         
         files = {
             'audio_file_48khz': (filename, open(file_path_48khz,'rb'), 'audio/wav'),
-            'audio_file_8khz': (filename, open(file_path_8khz,'rb'), 'audio/wav'),
+            # 'audio_file_8khz': (filename, open(file_path_8khz,'rb'), 'audio/wav'),
         }
         response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
         files['audio_file_48khz'][1].close()
-        files['audio_file_8khz'][1].close()
+        # files['audio_file_8khz'][1].close()
         if response.ok:
             self.count += 1
             self.duration += round(audio_duration/60000, 2)
@@ -684,10 +694,6 @@ class AudioRecorderApp:
         if self.current_index > 0:
             self.current_index -= 1
             self.update_ui_with_sentence()
-            if self.playback_frame is not None:
-               self.playback_frame.destroy()
-            if hasattr(self, 'canvas2'):
-                self.canvas2.get_tk_widget().destroy()
 
 
     def next_sentence(self):
@@ -698,8 +704,6 @@ class AudioRecorderApp:
             self.audio_recorder.frames_8000 = []
             if self.playback_frame is not None:
                self.playback_frame.destroy()
-            if hasattr(self, 'canvas2'):
-                self.canvas2.get_tk_widget().destroy()
     
     def popup_message(self, message : str, destroy_duration = 750):
         top = Toplevel()
@@ -716,7 +720,7 @@ class AudioRecorderApp:
             self.playback_frame.destroy()
 
         self.playback_frame = ttk.Frame(self.master)
-        self.playback_frame.pack(padx= (0,70))
+        self.playback_frame.pack()
         if audio_file_name is not None:
             print('audio file existss')
             self.audio_data = pyglet.media.load(audio_file_name, streaming = False)
@@ -745,6 +749,7 @@ class AudioRecorderApp:
         self.paused = False
         self.resumed = False
         self.seek = False
+        
         self.start = False
         self.stop = False
         self.audio_duration = self.seg.duration_seconds
@@ -755,14 +760,10 @@ class AudioRecorderApp:
         # scale_length = self.canvas2.get_tk_widget().winfo_reqwidth()
         x_axis_width = self.axes.get_position().width * self.fig2.get_figwidth() * self.fig2.dpi
 
-        # Calculate the length of the scale widget to match the width of the x-axis
-        scale_length = int(x_axis_width)
-        print('scale_length: ', scale_length)
         #seekbar
         self.seek_bar = ttk.Scale(
-            self.playback_frame, from_=0, to=self.audio_duration, orient="horizontal", length=scale_length, command=self.update_time_label)
-        self.seek_bar.pack(pady=(15,0), padx = (100,0))
-        self.seek_bar.bind("<B1-Motion>", self.pause_audio)
+            self.playback_frame, from_=0, to=self.audio_duration, orient="horizontal", length=400, command=self.update_time_label)
+        self.seek_bar.pack(pady=(10,0), padx = (55,0))
         self.seek_bar.bind("<ButtonRelease-1>", self.seek_to_position)
 
 
@@ -798,7 +799,6 @@ class AudioRecorderApp:
         self.player.play()
         self.play_start_time = time.time()
         self.start = True
-
 
     def pause_audio(self):
 
@@ -895,29 +895,24 @@ class AudioRecorderApp:
         self.playback_frame.after(100, self.update_seek_bar)
 
     def plot_waveform(self):
-        
         # pass
         print(self.seg.dBFS)
         dbfs_frames = [frame.dBFS for frame in self.seg]
         print(len(self.np_data))
         time_in_sec = np.linspace(0, self.audio_duration, len(self.np_data))
 
-        font1 = {'family':'sans serif','color':'#0D2740','size':10, 'weight' : 'bold'}
         if hasattr(self, 'canvas2'):
             self.canvas2.get_tk_widget().destroy()
-        self.fig2 = plt.figure(figsize=(14,3))
-        self.axes = plt.axes()
+        fig2 = plt.figure(figsize=(8,3))
+
         # plt.figure(figsize=(8, 2))
-        self.axes.set_xlim(0, right= self.audio_duration)
-        #plt.axhline(y = 17800, color = 'r', linestyle = '--')
         plt.plot(time_in_sec, self.np_data, color='#0D2740')
-        plt.xlabel('Time (seconds)', fontdict= font1)
-        plt.ylabel('Amplitude', fontdict= font1)
+        plt.xlabel('Time (seconds)')
+        plt.ylabel('Amplitude')
         #plt.title('Waveform') 
         plt.tight_layout()
-        self.fig2.set_facecolor('#717b96')
 
-        self.canvas2 = FigureCanvasTkAgg(self.fig2, master=self.playback_frame)
+        self.canvas2 = FigureCanvasTkAgg(fig2, master=self.playback_frame)
         self.canvas2.draw()
         self.canvas2.get_tk_widget().pack(pady=(10,0), padx = (0,0))
 
@@ -935,3 +930,5 @@ def main():
     
 if __name__ == "__main__":
     main()
+
+# pyinstaller --onefile -w --add-data "static_files;static_files" recording-app.py
