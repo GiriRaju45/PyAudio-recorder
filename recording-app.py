@@ -748,6 +748,7 @@ class AudioRecorderApp:
         self.paused = False
         self.resumed = False
         self.seek = False
+        
         self.start = False
         self.stop = False
         self.audio_duration = self.seg.duration_seconds
@@ -792,7 +793,6 @@ class AudioRecorderApp:
         self.player.play()
         self.play_start_time = time.time()
         self.start = True
-
 
     def pause_audio(self):
 
@@ -889,7 +889,6 @@ class AudioRecorderApp:
         self.playback_frame.after(100, self.update_seek_bar)
 
     def plot_waveform(self):
-        
         # pass
         print(self.seg.dBFS)
         dbfs_frames = [frame.dBFS for frame in self.seg]
