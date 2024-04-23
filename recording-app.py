@@ -166,7 +166,7 @@ class CustomProgressBar(ttk.Frame):
     def __init__(self, master=None, **kw):
         super().__init__(master, **kw)
 
-        self.canvas = tk.Canvas(self, width=1204, height=50, highlightthickness=0)
+        self.canvas = tk.Canvas(self, width=1204, height=20, highlightthickness=0)
         self.canvas.pack(side='top', fill='x', padx= 5)
 
         # Draw the scale with numbers from -50 to 0
@@ -181,7 +181,7 @@ class CustomProgressBar(ttk.Frame):
 
         
         self.progress = ttk.Progressbar(self, orient="horizontal", length=1200, mode="determinate", maximum= 50)
-        self.progress.pack(side= 'bottom', expand=False, ipady=30)
+        self.progress.pack(side= 'bottom', expand=False, ipady=15)
 
         db_style = ttk.Style()
         #db_style.theme_use('default')
@@ -440,7 +440,8 @@ class AudioRecorderApp:
             return button
         
         self.toggle_window_btn = ttk.Button(self.master, text="Open Window2", command=self.toggle_secondary_window, style='NoBorder.TButton')
-        self.toggle_window_btn.pack(side=tk.LEFT, padx=(20,0), pady=4)
+        #self.toggle_window_btn.pack(side='left', pady=(0, 50), padx= (20,0))
+        self.toggle_window_btn.place(x = 20, y=150)
         # self.open_secondary_window_btn = ttk.Button(sec_buttons_frame, text="Open Window2", command=self.create_second_window, style='NoBorder.TButton')
         # self.open_secondary_window_btn.pack(side=tk.LEFT, padx=32,pady = 4)
         # self.close_secondary_window_btn = ttk.Button(sec_buttons_frame, text="Close Window2", command=self.close_window, style='NoBorder.TButton')
@@ -737,6 +738,7 @@ class AudioRecorderApp:
             print('no file, loading from the current recording frames')
             print(len(self.np_data))
             self.seg = self.audio_recorder._create_audio_segment(self.audio_recorder.frames_48000, rate= 48000)
+            self.seg = self.seg + 3
             self.seg.export('temp.wav', format= 'wav') 
             self.audio_data = pyglet.media.load('temp.wav', streaming= False)
         self.player = pyglet.media.Player()
@@ -758,14 +760,18 @@ class AudioRecorderApp:
        # self.fig2.
         # scale_length = int(self.fig2.get_size_inches()[0] * self.playback_frame.winfo_fpixels('1i'))
         # scale_length = self.canvas2.get_tk_widget().winfo_reqwidth()
+       
         x_axis_width = self.axes.get_position().width * self.fig2.get_figwidth() * self.fig2.dpi
 
+        # Calculate the length of the scale widget to match the width of the x-axis
+        scale_length = int(x_axis_width)
+        print('scale_length: ', scale_length)
         #seekbar
         self.seek_bar = ttk.Scale(
-            self.playback_frame, from_=0, to=self.audio_duration, orient="horizontal", length=400, command=self.update_time_label)
-        self.seek_bar.pack(pady=(10,0), padx = (55,0))
+            self.playback_frame, from_=0, to=self.audio_duration, orient="horizontal", length=scale_length, command=self.update_time_label)
+        self.seek_bar.pack(pady=(15,0), padx = (100,0))
+        self.seek_bar.bind("<B1-Motion>", self.pause_audio)
         self.seek_bar.bind("<ButtonRelease-1>", self.seek_to_position)
-
 
         # Label to display current time and total duration
         self.time_label = ttk.Label(self.playback_frame, text="0:00 / {}".format(self.format_time(self.audio_duration)))
@@ -901,18 +907,22 @@ class AudioRecorderApp:
         print(len(self.np_data))
         time_in_sec = np.linspace(0, self.audio_duration, len(self.np_data))
 
+        font1 = {'family':'sans serif','color':'#0D2740','size':10, 'weight' : 'bold'}
         if hasattr(self, 'canvas2'):
             self.canvas2.get_tk_widget().destroy()
-        fig2 = plt.figure(figsize=(8,3))
-
+        self.fig2 = plt.figure(figsize=(14,3))
+        self.axes = plt.axes()
         # plt.figure(figsize=(8, 2))
+        self.axes.set_xlim(0, right= self.audio_duration)
+        #plt.axhline(y = 17800, color = 'r', linestyle = '--')
         plt.plot(time_in_sec, self.np_data, color='#0D2740')
-        plt.xlabel('Time (seconds)')
-        plt.ylabel('Amplitude')
+        plt.xlabel('Time (seconds)', fontdict= font1)
+        plt.ylabel('Amplitude', fontdict= font1)
         #plt.title('Waveform') 
         plt.tight_layout()
+        self.fig2.set_facecolor('#717b96')
 
-        self.canvas2 = FigureCanvasTkAgg(fig2, master=self.playback_frame)
+        self.canvas2 = FigureCanvasTkAgg(self.fig2, master=self.playback_frame)
         self.canvas2.draw()
         self.canvas2.get_tk_widget().pack(pady=(10,0), padx = (0,0))
 
