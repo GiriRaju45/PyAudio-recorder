@@ -230,6 +230,7 @@ class AudioRecorderApp:
         self.paused_position = 0
         self.playback_frame = None
         self.flag = 1
+        self.save_aud = False
       #  self.master.after(100, self.update_db_level())
 
     def setup_menu(self):
@@ -352,7 +353,8 @@ class AudioRecorderApp:
     def sync_display_text_sentence(self, event=None):
         self.text_sentence.delete("1.0", tk.END)
         self.text_sentence.insert("1.0", self.display_text_sentence.get("1.0", tk.END))
-    
+
+ 
     def create_widgets(self):        
         self.master.minsize(width=1536, height=480)  # Set the minimum size of the window
 
@@ -439,6 +441,8 @@ class AudioRecorderApp:
             button.image = img  
             return button
         
+          
+        
         self.toggle_window_btn = ttk.Button(self.master, text="Open Window2", command=self.toggle_secondary_window, style='NoBorder.TButton')
         #self.toggle_window_btn.pack(side='left', pady=(0, 50), padx= (20,0))
         self.toggle_window_btn.place(x = 20, y=150)
@@ -464,7 +468,20 @@ class AudioRecorderApp:
         self.master.bind("<Control-p>", lambda event: self.previous_sentence())
 
         #Frame for db_progressbar:
-
+    def rec_indication(self, image_path):
+            try:
+                base_path = sys._MEIPASS
+            except Exception:
+                base_path = os.path.abspath(".")
+                
+            image_path= os.path.join(base_path, image_path)
+            original_img = Image.open(image_path)
+        
+            resized_img = original_img.resize((60, 50), Image.Resampling.LANCZOS)
+            img = ImageTk.PhotoImage(resized_img)
+            button = ttk.Button(self.master, image=img, style= 'NoBorder.TButton')
+            button.image = img  
+            button.place(x = 200, y = 150)
 
 
 ########################################################################################################################################
@@ -569,8 +586,12 @@ class AudioRecorderApp:
                self.playback_frame.destroy()
 
     def start_recording(self, event=None):
+        
+        self.save_aud = False
+        self.rec_indication('static_files/red.png')
         self.audio_recorder.frames_48000=[]
         self.audio_recorder.frames_8000=[]
+        
         if self.audio_dir == '':
             self.popup_message('ERROR!! please select the style, language and speak to create the respective folder before starting to  record', destroy_duration= 4000)
         else:
@@ -636,7 +657,7 @@ class AudioRecorderApp:
         #     self.master.after_cancel(self.update_db_level)
         #     print('cancelled the dB update')
         #     return
-   
+    
     def stop_recording_or_playing(self , event = None):
         self.audio_recorder.stop_recording()
         # self.db_thread.join()
@@ -653,6 +674,9 @@ class AudioRecorderApp:
         self.playback_seekbar()    
 
     def save_audio(self):
+        
+        self.save_aud = True
+        self.rec_indication('static_files/green.png')
         id = self.text_id.get()
         sentence = self.text_sentence.get("1.0", "end-1c")
         filename = f"{id}.wav" 
@@ -738,8 +762,10 @@ class AudioRecorderApp:
             print('no file, loading from the current recording frames')
             print(len(self.np_data))
             self.seg = self.audio_recorder._create_audio_segment(self.audio_recorder.frames_48000, rate= 48000)
-            self.seg = self.seg + 3
-            self.seg.export('temp.wav', format= 'wav') 
+            self.seg1 = self.seg + 8
+            print(self.seg)
+            self.seg1.export('temp.wav', format= 'wav') 
+            self.seg.export('temp1.wav', format= 'wav') 
             self.audio_data = pyglet.media.load('temp.wav', streaming= False)
         self.player = pyglet.media.Player()
         print('before loading audio', self.player.volume) # self.player.loop = True
@@ -942,3 +968,6 @@ if __name__ == "__main__":
     main()
 
 # pyinstaller --onefile -w --add-data "static_files;static_files" recording-app.py
+
+
+
