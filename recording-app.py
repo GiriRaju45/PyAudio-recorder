@@ -176,7 +176,7 @@ class CustomProgressBar(ttk.Frame):
                 i = ''
             else:
                 x = (i + 50) * 1200 / 50
-            self.canvas.create_text(x, 30, text=str(i), anchor='n', fill = '#B8B8B8')#'#FA5252')
+            self.canvas.create_text(x, 30, text=str(i), anchor='n', fill = 'black')#'#FA5252')
 
 
         
@@ -354,6 +354,12 @@ class AudioRecorderApp:
         self.text_sentence.delete("1.0", tk.END)
         self.text_sentence.insert("1.0", self.display_text_sentence.get("1.0", tk.END))
 
+    def remove_focus(self, event = None):
+        print('function called..')
+        self.text_sentence.focus_set()
+        #self.text_sentence.focus_get
+    def root_focus(self, event = None):
+        self.main_frame.focus_set()
  
     def create_widgets(self):        
         self.master.minsize(width=1536, height=480)  # Set the minimum size of the window
@@ -392,21 +398,21 @@ class AudioRecorderApp:
         self.submit_btn = tk.Button(drop_frame, text="Submit", command=self.on_submit)
         self.submit_btn.pack(pady=(40, 0), padx = 30, side = tk.LEFT)
 
-        main_frame = ttk.Frame(self.master)
-        main_frame.pack(pady= (30, 0),expand=False)
+        self.main_frame = ttk.Frame(self.master)
+        self.main_frame.pack(pady= (30, 0),expand=False)
 
-        self.audio_count = ttk.Label(main_frame, text=f"Audio Count: {self.count}", font=('Times New Roman', 18, 'bold'), width=24, bootstyle="success", foreground= '#FA5252')
+        self.audio_count = ttk.Label(self.main_frame, text=f"Audio Count: {self.count}", font=('Times New Roman', 18, 'bold'), width=24, bootstyle="success", foreground= '#FA5252')
         self.audio_count.pack()
 
-        self.total_aud_duration = ttk.Label(main_frame, text=f"Total Duration: {self.duration} minutes", font=('Times New Roman', 18, 'bold'), width=24, bootstyle="success", foreground= '#FA5252')
+        self.total_aud_duration = ttk.Label(self.main_frame, text=f"Total Duration: {self.duration} minutes", font=('Times New Roman', 18, 'bold'), width=24, bootstyle="success", foreground= '#FA5252')
         self.total_aud_duration.pack()
 
-        self.text_id = ttk.Entry(main_frame, font=('Times New Roman', 18, 'bold'), width=24, bootstyle="danger")
+        self.text_id = ttk.Entry(self.main_frame, font=('Times New Roman', 18, 'bold'), width=24, bootstyle="danger")
         self.text_id.bind('<Return>', self.load_entry_from_id)
         self.text_id.pack(pady=(16, 0))  # Padding only at the top
 
-        bold_font = ('Arial Unicode MS', 20)  # Using 'Arial Unicode MS' for better Unicode character support
-        self.text_sentence = tk.Text(main_frame, height=3, width=65, wrap="word", font=bold_font, spacing1=10, spacing2=10, spacing3=10)
+        bold_font =('Arial Unicode MS', 26, 'bold')  # Using 'Arial Unicode MS' for better Unicode character support
+        self.text_sentence = tk.Text(self.main_frame, height=5, width=55, wrap="word", font=bold_font, spacing1=10, spacing2=10, spacing3=10)
         self.text_sentence.tag_configure("center", justify='center')
         self.text_sentence.pack(pady=20, padx=10)  # Padding on sides for the Text widget
         self.text_sentence.insert("1.0", "Please use the load CSV option in the File menu to display the sentence.")
@@ -415,9 +421,9 @@ class AudioRecorderApp:
         style.map('NoBorder.TButton', foreground = [('disabled','#0D2740'), (('active', 'blue'))])      
 
         # Frame for buttons
-        buttons_frame = ttk.Frame(main_frame)
+        buttons_frame = ttk.Frame(self.main_frame)
         buttons_frame.pack(pady=0, expand= True)
-        sec_buttons_frame = ttk.Frame(main_frame)
+        sec_buttons_frame = ttk.Frame(self.main_frame)
         sec_buttons_frame.pack(pady=2, expand= True)
  
 #######################################################################################################################################
@@ -465,7 +471,11 @@ class AudioRecorderApp:
         self.btn_next.pack(side=tk.LEFT, padx=32,pady = 2)
         self.master.bind("<Control-s>", lambda event: self.save_audio())
         self.master.bind("<Control-n>", lambda event: self.next_sentence())
-        self.master.bind("<Control-p>", lambda event: self.previous_sentence())
+        self.master.bind("<Control-p>", lambda event: self.play_audio_file())
+        self.master.bind("<Left>", lambda event: self.previous_sentence())
+        self.master.bind("<Right>", lambda event: self.next_sentence())
+        #self.text_sentence.bind('<Button-1>', self.remove_focus)
+        self.master.bind('<Button-2>', self.root_focus)
 
         #Frame for db_progressbar:
     def rec_indication(self, image_path):
@@ -676,50 +686,56 @@ class AudioRecorderApp:
     def save_audio(self):
         
         self.save_aud = True
-        self.rec_indication('static_files/green.png')
+        #self.rec_indication('static_files/green.png')
         id = self.text_id.get()
         sentence = self.text_sentence.get("1.0", "end-1c")
         filename = f"{id}.wav" 
 
         audio_duration = self.audio_recorder.save_recording(filename, self.audio_dir)
-        file_path_48khz = os.path.join(self.audio_dir,'48khz', filename)
-        # file_path_8khz = os.path.join(self.audio_dir,'8khz', filename)
-
-        data = {               
-            "easy_id": self.current_date,
-            "Sentence": sentence,
-            "speaker": self.current_speaker,
-            "language": self.current_language,
-            "style": self.current_style,
-            "category": self.current_category,
-            "data_id": id
-        }
-        
-        files = {
-            'audio_file_48khz': (filename, open(file_path_48khz,'rb'), 'audio/wav'),
-            # 'audio_file_8khz': (filename, open(file_path_8khz,'rb'), 'audio/wav'),
-        }
-        response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
-        files['audio_file_48khz'][1].close()
-        # files['audio_file_8khz'][1].close()
-        if response.ok:
-            self.count += 1
-            self.duration += round(audio_duration/60000, 2)
-            print("Successfully uploaded the audio file and metadata.")
-            self.audio_count.config(text=f"Audio Count: {self.count}")
-            self.total_aud_duration.config(text=f"Duration: {self.duration} minutes") 
-        else:
-            print(f"Failed to upload the audio file. Status code: {response.status_code}, Response: {response.text}")
         if audio_duration is None:
-            self.popup_message('Error! No audio to save!!', destroy_duration= 2000)
+            self.popup_message('No audio to save..', 2000)
+            return
         else:
-            self.next_sentence()
+            self.rec_indication('static_files/green.png')
+            file_path_48khz = os.path.join(self.audio_dir,'48khz', filename)
+            # file_path_8khz = os.path.join(self.audio_dir,'8khz', filename)
+
+            data = {               
+                "easy_id": self.current_date,
+                "Sentence": sentence,
+                "speaker": self.current_speaker,
+                "language": self.current_language,
+                "style": self.current_style,
+                "category": self.current_category,
+                "data_id": id
+            }
+            
+            files = {
+                'audio_file_48khz': (filename, open(file_path_48khz,'rb'), 'audio/wav'),
+                # 'audio_file_8khz': (filename, open(file_path_8khz,'rb'), 'audio/wav'),
+            }
+            response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
+            files['audio_file_48khz'][1].close()
+            # files['audio_file_8khz'][1].close()
+            if response.ok:
+                self.count += 1
+                self.duration += round(audio_duration/60000, 2)
+                print("Successfully uploaded the audio file and metadata.")
+                self.audio_count.config(text=f"Audio Count: {self.count}")
+                self.total_aud_duration.config(text=f"Duration: {self.duration} minutes") 
+            else:
+                print(f"Failed to upload the audio file. Status code: {response.status_code}, Response: {response.text}")
+            if audio_duration is None:
+                self.popup_message('Error! No audio to save!!', destroy_duration= 2000)
+            else:
+                self.next_sentence()
 
     def previous_sentence(self):
         if self.current_index > 0:
             self.current_index -= 1
             self.update_ui_with_sentence()
-
+            if self.playback_frame is not None:
+               self.playback_frame.destroy()
 
     def next_sentence(self):
         if self.current_index < len(self.data) - 1:
@@ -958,7 +974,7 @@ class AudioRecorderApp:
 #################################################################################
 def main():
     
-    root = ttkb.Window(themename='darkly') # Main/Parent Window - Offers access to geometric configuration of widgets.
+    root = ttkb.Window(themename='flatly') # Main/Parent Window - Offers access to geometric configuration of widgets.
     app = AudioRecorderApp(root)
     root.bind('<Key-asterisk>', lambda event: app.start_recording())
     root.bind('<space>', lambda event: app.stop_recording_or_playing(event))
