@@ -6,3 +6,4 @@ data
 PyAudio-recorder - Copy/
 recording-app copy 2.py/
 PyAudio-recorder/
+build/

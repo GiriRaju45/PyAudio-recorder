@@ -223,6 +223,8 @@ class AudioRecorderApp:
         self.current_index = 0 # Keep track of the current sentence
         self.data = None # Load your CSV data here
         self.setup_menu()
+        self.screen_width = self.master.winfo_screenwidth()
+        self.create_gui() 
         self.create_widgets()
         self.update_ui_with_sentence()  # Add this line to load the first sentence on startu
         self.audio_dir = ''
@@ -360,6 +362,21 @@ class AudioRecorderApp:
         #self.text_sentence.focus_get
     def root_focus(self, event = None):
         self.main_frame.focus_set()
+
+    def open_directory(self):
+        try:
+            if os.name == 'nt':  # For Windows
+                os.startfile(self.audio_recorder.audio_dir_48khz)
+            elif os.name == 'posix':  # For Linux, macOS
+                subprocess.run(['open' if sys.platform == 'darwin' else 'xdg-open', path])
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to open the directory: {e}")
+
+    def create_gui(self):
+        # Create a button to open the directory
+        open_dir_button = ttk.Button(self.master, text="Open Directory", command=lambda: self.open_directory)
+        button_x_position = self.screen_width/2 + 500
+        open_dir_button.place(x=button_x_position,y=150)
  
     def create_widgets(self):        
         self.master.minsize(width=1536, height=480)  # Set the minimum size of the window
@@ -419,6 +436,10 @@ class AudioRecorderApp:
         style = ttk.Style()
         style.configure('NoBorder.TButton', borderwidth=0, highlightthickness=0)
         style.map('NoBorder.TButton', foreground = [('disabled','#0D2740'), (('active', 'blue'))])      
+        
+        open_dir_button = ttk.Button(self.master, text="Open Directory", command=self.open_directory)
+        dir_button_x_position = self.screen_width/2 + 400
+        open_dir_button.place(x=dir_button_x_position,y=150)
 
         # Frame for buttons
         buttons_frame = ttk.Frame(self.main_frame)
@@ -479,19 +500,20 @@ class AudioRecorderApp:
 
         #Frame for db_progressbar:
     def rec_indication(self, image_path):
-            try:
-                base_path = sys._MEIPASS
-            except Exception:
-                base_path = os.path.abspath(".")
-                
-            image_path= os.path.join(base_path, image_path)
-            original_img = Image.open(image_path)
-        
-            resized_img = original_img.resize((60, 50), Image.Resampling.LANCZOS)
-            img = ImageTk.PhotoImage(resized_img)
-            button = ttk.Button(self.master, image=img, style= 'NoBorder.TButton')
-            button.image = img  
-            button.place(x = 200, y = 150)
+        try:
+            base_path = sys._MEIPASS
+        except Exception:
+            base_path = os.path.abspath(".")
+            
+        image_path= os.path.join(base_path, image_path)
+        original_img = Image.open(image_path)
+    
+        resized_img = original_img.resize((60, 50), Image.Resampling.LANCZOS)
+        button_x_position = self.screen_width/2 - 800
+        img = ImageTk.PhotoImage(resized_img)
+        button = ttk.Button(self.master, image=img, style= 'NoBorder.TButton')
+        button.image = img  
+        button.place(x=button_x_position, y=150)
 
 
 ########################################################################################################################################
@@ -669,6 +691,7 @@ class AudioRecorderApp:
         #     return
     
     def stop_recording_or_playing(self , event = None):
+        self.rec_indication('static_files/orange.png')
         self.audio_recorder.stop_recording()
         # self.db_thread.join()
         # self.db_stream.stop_stream()
