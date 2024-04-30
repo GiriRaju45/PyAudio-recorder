@@ -282,6 +282,7 @@ class AudioRecorderApp:
         
         # Update dropdown options
         self.microphone_dropdown['values'] = microphone_options
+        self.microphone_dropdown_8k['values'] = microphone_options
 
     def create_second_window(self):
         global second_window
@@ -391,12 +392,17 @@ class AudioRecorderApp:
         self.microphone_var = tk.StringVar()
         self.microphone_dropdown = ttk.Combobox(drop_frame, textvariable=self.microphone_var, state='readonly')
         self.microphone_dropdown.pack(pady=(40, 0), padx = 10, side = tk.LEFT)
-        self.microphone_dropdown.set('Select Microphone')
+        self.microphone_dropdown.set('Select 48000 Hz - Microphone')
+
+        self.microphone_var_n = tk.StringVar()
+        self.microphone_dropdown_8k = ttk.Combobox(drop_frame, textvariable=self.microphone_var_n, state='readonly')
+        self.microphone_dropdown_8k.pack(pady=(40, 0), padx = 10, side = tk.LEFT)
+        self.microphone_dropdown_8k.set('Select 8000 Hz - Microphone')
         self.update_microphone_dropdown()
 
         # Add a submit button
         self.submit_btn = tk.Button(drop_frame, text="Submit", command=self.on_submit)
-        self.submit_btn.pack(pady=(40, 0), padx = 30, side = tk.LEFT)
+        self.submit_btn.pack(pady=(40, 0), padx = 10, side = tk.LEFT)
 
         self.main_frame = ttk.Frame(self.master)
         self.main_frame.pack(pady= (30, 0),expand=False)
@@ -698,7 +704,7 @@ class AudioRecorderApp:
         else:
             self.rec_indication('static_files/green.png')
             file_path_48khz = os.path.join(self.audio_dir,'48khz', filename)
-            # file_path_8khz = os.path.join(self.audio_dir,'8khz', filename)
+            file_path_8khz = os.path.join(self.audio_dir,'8khz', filename)
 
             data = {               
                 "easy_id": self.current_date,
