@@ -49,21 +49,21 @@ class AudioRecorder:
         self.is_recording = False
         self.stream = None
 
-    def start_recording(self, device_index=None):
+    def start_recording(self, device_index_48k=None, device_index_8k = None):
         self.stream_48000 = self.pyaudio_instance.open(
             format=self.format,
             channels=self.channels,
             rate=self.rate_48000,
             input=True,
             frames_per_buffer=self.frames_per_buffer,
-            input_device_index=device_index,
+            input_device_index=device_index_48k,
         )
         self.stream_8000 = self.pyaudio_instance.open(format=self.format,
             channels=self.channels,
             rate=self.rate_8000,
             input=True,
             frames_per_buffer=self.frames_per_buffer,
-            input_device_index=device_index,)
+            input_device_index=device_index_8k,)
         
         self.is_recording = True
         self.recording_thread_48000 = threading.Thread(target=self._record_loop, args=(self.stream_48000, self.frames_48000, self.rate_48000))
@@ -443,9 +443,9 @@ class AudioRecorderApp:
         style.configure('NoBorder.TButton', borderwidth=0, highlightthickness=0)
         style.map('NoBorder.TButton', foreground = [('disabled','#0D2740'), (('active', 'blue'))])      
         
-        open_dir_button = ttk.Button(self.master, text="Open Directory", command=self.open_directory)
-        dir_button_x_position = self.screen_width/2 + 400
-        open_dir_button.place(x=dir_button_x_position,y=150)
+        # open_dir_button = ttk.Button(self.master, text="Open Directory", command=self.open_directory)
+        # dir_button_x_position = self.screen_width/2 + 400
+        # open_dir_button.place(x=dir_button_x_position,y=150)
 
         # Frame for buttons
         buttons_frame = ttk.Frame(self.main_frame)
@@ -633,16 +633,17 @@ class AudioRecorderApp:
         if self.audio_dir == '':
             self.popup_message('ERROR!! please select the style, language and speak to create the respective folder before starting to  record', destroy_duration= 4000)
         else:
-            index = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
+            index_48k = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
+            index_8k = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
             self.popup_message('Recording started!!')
-            self.audio_recorder.start_recording(device_index=index)
+            self.audio_recorder.start_recording(device_index_48k= index_48k, device_index_8k= index_8k)
             print(self.audio_recorder.is_recording)
             self.db_stream =  self.db_pyaud_instance.open(format=pyaudio.paInt16,
                                 channels=1,
                                 rate=48000,
                                 input=True,
                                 frames_per_buffer=512,
-                                input_device_index= index)
+                                input_device_index= index_48k)
             
             self.update_db_value = self.master.after(75, self.update_db_level)
 
