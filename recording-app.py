@@ -6,6 +6,7 @@ from ttkbootstrap.constants import *
 import pandas as pd
 import numpy as np
 import time 
+import datetime
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import pyaudio
@@ -47,21 +48,21 @@ class AudioRecorder:
         self.is_recording = False
         self.stream = None
 
-    def start_recording(self, device_index=None):
+    def start_recording(self, device_index_48k=None, device_index_8k = None):
         self.stream_48000 = self.pyaudio_instance.open(
             format=self.format,
             channels=self.channels,
             rate=self.rate_48000,
             input=True,
             frames_per_buffer=self.frames_per_buffer,
-            input_device_index=device_index,
+            input_device_index=device_index_48k,
         )
         self.stream_8000 = self.pyaudio_instance.open(format=self.format,
             channels=self.channels,
             rate=self.rate_8000,
             input=True,
             frames_per_buffer=self.frames_per_buffer,
-            input_device_index=device_index,)
+            input_device_index=device_index_8k,)
         
         self.is_recording = True
         self.recording_thread_48000 = threading.Thread(target=self._record_loop, args=(self.stream_48000, self.frames_48000, self.rate_48000))
@@ -192,7 +193,7 @@ class AudioRecorderApp:
         self.data = None # Load your CSV data here
         self.setup_menu()
         self.screen_width = self.master.winfo_screenwidth()
-        self.create_gui() 
+        # self.create_gui() 
         self.create_widgets()
         self.update_ui_with_sentence()  # Add this line to load the first sentence on startu
         self.audio_dir = ''
@@ -223,6 +224,8 @@ class AudioRecorderApp:
             
     
     def make_directory(self):
+        now = datetime.datetime.now()
+        self.unique_id = now.strftime("%Y%m%d%H%M%S")
         language = self.language_var.get()
         style =self.style_var.get()
         speaker = self.speaker_var.get()
@@ -230,7 +233,7 @@ class AudioRecorderApp:
         if language == 'Select Language' or style == 'Select Style' or speaker == 'Select Speaker':
             self.popup_message("ERROR!! Please select a valid option to create the folder")
         else:
-            self.audio_dir = os.path.join(base_dir,language,speaker,style,self.current_date)
+            self.audio_dir = os.path.join(base_dir,language,speaker,style,self.unique_id)
             os.makedirs(self.audio_dir, exist_ok=True)
             print(self.audio_dir)
             self.popup_message("Success! Directory Created")
@@ -238,6 +241,7 @@ class AudioRecorderApp:
             
     def on_submit(self):
         self.make_directory()
+        # self.create_gui() 
 
     def update_microphone_dropdown(self):
         # Get device info for each input device (microphone)
@@ -252,6 +256,7 @@ class AudioRecorderApp:
         
         # Update dropdown options
         self.microphone_dropdown['values'] = microphone_options
+        self.microphone_dropdown_8k['values'] = microphone_options
 
     def create_second_window(self):
         global second_window
@@ -359,12 +364,17 @@ class AudioRecorderApp:
         self.microphone_var = tk.StringVar()
         self.microphone_dropdown = ttk.Combobox(drop_frame, textvariable=self.microphone_var, state='readonly')
         self.microphone_dropdown.pack(pady=(40, 0), padx = 10, side = tk.LEFT)
-        self.microphone_dropdown.set('Select Microphone')
+        self.microphone_dropdown.set('Select 48000 Hz - Microphone')
+
+        self.microphone_var_n = tk.StringVar()
+        self.microphone_dropdown_8k = ttk.Combobox(drop_frame, textvariable=self.microphone_var_n, state='readonly')
+        self.microphone_dropdown_8k.pack(pady=(40, 0), padx = 10, side = tk.LEFT)
+        self.microphone_dropdown_8k.set('Select 8000 Hz - Microphone')
         self.update_microphone_dropdown()
 
         # Add a submit button
         self.submit_btn = tk.Button(drop_frame, text="Submit", command=self.on_submit)
-        self.submit_btn.pack(pady=(40, 0), padx = 30, side = tk.LEFT)
+        self.submit_btn.pack(pady=(40, 0), padx = 10, side = tk.LEFT)
 
         main_frame = ttk.Frame(self.master)
         main_frame.pack(pady= (30, 0),expand=False)
@@ -387,11 +397,11 @@ class AudioRecorderApp:
         style = ttk.Style()
         style.configure('NoBorder.TButton', borderwidth=0, highlightthickness=0)
         style.map('NoBorder.TButton', foreground = [('disabled','#0D2740'), (('active', 'blue'))])      
-
+        
         open_dir_button = ttk.Button(self.master, text="Open Directory", command=self.open_directory)
         dir_button_x_position = self.screen_width/2 + 400
         open_dir_button.place(x=dir_button_x_position,y=150)
-    
+
         # Frame for buttons
         buttons_frame = ttk.Frame(main_frame)
         buttons_frame.pack(pady=0, expand= True)
@@ -586,16 +596,17 @@ class AudioRecorderApp:
         if self.audio_dir == '':
             self.popup_message('ERROR!! please select the style, language and speak to create the respective folder before starting to  record', destroy_duration= 4000)
         else:
-            index = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
+            index_48k = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
+            index_8k = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
             self.popup_message('Recording started!!')
-            self.audio_recorder.start_recording(device_index=index)
+            self.audio_recorder.start_recording(device_index_48k= index_48k, device_index_8k= index_8k)
             print(self.audio_recorder.is_recording)
             self.db_stream =  self.db_pyaud_instance.open(format=pyaudio.paInt16,
                                 channels=1,
                                 rate=48000,
                                 input=True,
                                 frames_per_buffer=512,
-                                input_device_index= index)
+                                input_device_index= index_48k)
             
             self.update_db_value = self.master.after(75, self.update_db_level)
 
@@ -644,8 +655,13 @@ class AudioRecorderApp:
         filename = f"{id}.wav" 
 
         audio_duration = self.audio_recorder.save_recording(filename, self.audio_dir)
-        file_path_48khz = os.path.join(self.audio_dir,'48khz', filename)
-        # file_path_8khz = os.path.join(self.audio_dir,'8khz', filename)
+        if audio_duration is None:
+            self.popup_message('No audio to save..', 2000)
+            return
+        else:
+            self.rec_indication('static_files/green.png')
+            file_path_48khz = os.path.join(self.audio_dir,'48khz', filename)
+            file_path_8khz = os.path.join(self.audio_dir,'8khz', filename)
 
         data = {               
             "easy_id": self.current_date,
@@ -658,12 +674,12 @@ class AudioRecorderApp:
         }
         
         files = {
-            'audio_file_48khz': (filename, open(file_path_48khz,'rb'), 'audio/wav')
-            # 'audio_file_8khz': (filename, open(file_path_8khz,'rb'), 'audio/wav'),
+            'audio_file_48khz': (filename, open(file_path_48khz,'rb'), 'audio/wav'),
+            'audio_file_8khz': (filename, open(file_path_8khz,'rb'), 'audio/wav')
         }
         response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
         files['audio_file_48khz'][1].close()
-        # files['audio_file_8khz'][1].close()
+        files['audio_file_8khz'][1].close()
         if response.ok:
             self.count += 1
             added_seconds = audio_duration / 1000
@@ -923,7 +939,6 @@ class AudioRecorderApp:
 
 #################################################################################
 def main():
-    
     root = ttkb.Window(themename='flatly') # Main/Parent Window - Offers access to geometric configuration of widgets.
     root.state('zoomed')
     app = AudioRecorderApp(root)
@@ -935,6 +950,7 @@ if __name__ == "__main__":
     main()
 
 # pyinstaller --onefile -w --add-data "static_files;static_files" recording-app-light-v0.py
+# pyinstaller --onefile -w --add-data "static_files;static_files" recording-app.py
 
 
 
