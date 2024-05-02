@@ -15,16 +15,17 @@ import os
 import requests
 import threading
 import sys
-# import librosa
+import cProfile
 from tkinter import messagebox
 from pydub import AudioSegment
-# from pydub.utils import mediainfo
-# from pydub.playback import play
+import subprocess
 from PIL import Image, ImageTk
 #import multiprocessing
 import pyglet
 import wave
-# import pygame
+
+
+
 from utils.detect_silence import trim_silence  
 
 
@@ -78,17 +79,17 @@ class AudioRecorder:
         while self.is_recording:
             try:
                 data = stream.read(self.frames_per_buffer, exception_on_overflow=False)
-                #print(data)
+                ##print(data)
                 frames.append(data)
-                # print(self.rec_data)
+                # #print(self.rec_data)
                 # if rate == 48000:
-                #     # print('48000000')
+                #     # #print('48000000')
                 #     self.rec_data = data
             except:
                 KeyboardInterrupt
-                print('Keyboard Interupt')
+                #print('Keyboard Interupt')
                 return
-            #print(data)
+            ##print(data)
             
     def stop_recording(self):
         if self.is_recording: 
@@ -103,7 +104,7 @@ class AudioRecorder:
             
     def save_recording(self, filename, audio_dir):
         if not self.frames_48000 or not self.frames_8000:
-            print("No audio to save.")
+            #print("No audio to save.")
             return
         self.audio_dir_48khz = os.path.join(audio_dir, '48khz')
         self.audio_dir_8khz = os.path.join(audio_dir, '8khz')
@@ -148,8 +149,8 @@ class Extra(tk.Toplevel):
 #     def draw_scale(self):
 #         self.canv_h = self.winfo_reqheight()
 #         self.canv_w = self.winfo_reqwidth()
-#         print('canvas height: ',self.canv_h)
-#         print('canvas width: ', self.canv_w)
+#         #print('canvas height: ',self.canv_h)
+#         #print('canvas width: ', self.canv_w)
 #         self.create_line(0, self.canv_h/2, self.canv_w, self.canv_h/2, fill="black", width=1)
 #         for i in range(0, 52, 2):
 #             if i >= 0 and i <= 22 :
@@ -159,7 +160,7 @@ class Extra(tk.Toplevel):
 #             elif i > 38 and i <= 50:
 #                 color = "red"
 #             self.create_text((i) * 16, 20, text=str(i), anchor="n")
-#             # print(i, i*16)
+#             # #print(i, i*16)
 #             self.create_line((i) * 16, 10, (i) * 16, 15, fill=color)
         
 class CustomProgressBar(ttk.Frame):
@@ -192,7 +193,7 @@ class CustomProgressBar(ttk.Frame):
     def update_color(self, x):
         x = max(-50, x)
         value = 50 - abs(x)
-        # print(value)
+        # #print(value)
         if 0 <= value <= 22:
             self.progress['style'] = 'green.Horizontal.TProgressbar'
         elif 22 < value <= 38:
@@ -263,7 +264,7 @@ class AudioRecorderApp:
         else:
             self.audio_dir = os.path.join(base_dir,language,speaker,style,self.current_date)
             os.makedirs(self.audio_dir, exist_ok=True)
-            print(self.audio_dir)
+            #print(self.audio_dir)
             self.popup_message("Success! Directory Created")
             #self.master.after(2000, success_message.destroy)
             
@@ -314,13 +315,13 @@ class AudioRecorderApp:
         #     if second_window.winfo_exists():
         #         second_window.destroy()
         #         self.toggle_window_btn.config(text="Open Window2")
-        #         print("Here 1")
+        #         #print("Here 1")
         #     else:
-        #         print("Here 2")
+        #         #print("Here 2")
         #         self.create_second_window()
         #         self.toggle_window_btn.config(text="Close Window2")
         # else:
-        #     print("Here 3")
+        #     #print("Here 3")
         #     self.create_second_window()
         #     self.toggle_window_btn.config(text="Close Window2")
         if self.flag == 1:
@@ -333,7 +334,7 @@ class AudioRecorderApp:
             self.toggle_window_btn.config(text="Open Window2")
  
     def on_secondary_window_close(self):
-        print("Here 4")
+        #print("Here 4")
         second_window.destroy()
         self.flag = 1
         self.toggle_window_btn.config(text="Open Window2")
@@ -358,7 +359,7 @@ class AudioRecorderApp:
         self.text_sentence.insert("1.0", self.display_text_sentence.get("1.0", tk.END))
 
     def remove_focus(self, event = None):
-        print('function called..')
+        #print('function called..')
         self.text_sentence.focus_set()
         #self.text_sentence.focus_get
     def root_focus(self, event = None):
@@ -515,7 +516,7 @@ class AudioRecorderApp:
         original_img = Image.open(image_path)
     
         resized_img = original_img.resize((60, 50), Image.Resampling.LANCZOS)
-        button_x_position = self.screen_width/2 - 800
+        button_x_position = self.screen_width/2 - 300
         img = ImageTk.PhotoImage(resized_img)
         button = ttk.Button(self.master, image=img, style= 'NoBorder.TButton')
         button.image = img  
@@ -539,7 +540,7 @@ class AudioRecorderApp:
         elif matching_index == self.current_index:
             pass
         else:
-            print("ID not found.")
+            #print("ID not found.")
             self.popup_message('ID not found. Please enter a valid ID', destroy_duration= 2000)
         self.play_audio_file()
         
@@ -591,7 +592,7 @@ class AudioRecorderApp:
         self.target_path = os.path.join(target_folder, filename)
         shutil.copy(filepath, self.target_path)
 
-        print(f"File saved to {self.target_path}")
+        #print(f"File saved to {self.target_path}")
         
     def load_csv(self):
         filepath = fd.askopenfilename(filetypes=[("CSV files", "*.csv")])
@@ -637,7 +638,7 @@ class AudioRecorderApp:
             index_8k = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
             self.popup_message('Recording started!!')
             self.audio_recorder.start_recording(device_index_48k= index_48k, device_index_8k= index_8k)
-            print(self.audio_recorder.is_recording)
+            #print(self.audio_recorder.is_recording)
             self.db_stream =  self.db_pyaud_instance.open(format=pyaudio.paInt16,
                                 channels=1,
                                 rate=48000,
@@ -656,10 +657,10 @@ class AudioRecorderApp:
             try:
                 data = self.db_stream.read(512, exception_on_overflow=False)
                 seg = AudioSegment(b''.join([data]), sample_width=2, channels=1, frame_rate=48000)
-                print(len(seg))
+                #print(len(seg))
                 
-                print(seg.dBFS)
-                db_value = int(seg.dBFS)
+                #print(seg.dBFS)
+                db_value = seg.dBFS
                 if db_value == -np.inf:
                     db_value = -50
                 value = 50 - abs(db_value)
@@ -671,19 +672,20 @@ class AudioRecorderApp:
                 self.update_db_value = self.master.after(75, self.update_db_level)
                 
             except Exception as e:
+
                 print("Error while updating DB level:", e)
 
 
     # def _record_db_stream(self, stream):
-    #     print('called function')
+    #     #print('called function')
     #     while self.audio_recorder.is_recording:
-    #         print('started_rec')
+    #         #print('started_rec')
     #         try:
     #             data = stream.read(512, exception_on_overflow=False)
-    #             #print('data: ', data)
+    #             ##print('data: ', data)
     #             seg = AudioSegment(b''.join([data]), sample_width = 2, channels = 1, frame_rate = 48000)
     #             for fr in seg:
-    #                 print(fr.dBFS)
+    #                 #print(fr.dBFS)
     #                 #threading.Thread(target= self.db_level.update_progress, args=(int(fr.dBFS),)).start()
     #         #         self.update_db_level(int(fr.dBFS))
     #         except:
@@ -692,9 +694,9 @@ class AudioRecorderApp:
         # set the bar to the silence level dBFS
         # elif not self.audio_recorder.is_recording:
         #     self.update_db_level(-50)
-        #     print('setting the db to the -50/ silence')
+        #     #print('setting the db to the -50/ silence')
         #     self.master.after_cancel(self.update_db_level)
-        #     print('cancelled the dB update')
+        #     #print('cancelled the dB update')
         #     return
     
     def stop_recording_or_playing(self , event = None):
@@ -749,12 +751,23 @@ class AudioRecorderApp:
             # files['audio_file_8khz'][1].close()
             if response.ok:
                 self.count += 1
-                self.duration += round(audio_duration/60000, 2)
-                print("Successfully uploaded the audio file and metadata.")
+                added_seconds = audio_duration / 1000
+                self.duration += added_seconds
+                hours, remainder = divmod(self.duration, 3600)
+                minutes, seconds = divmod(remainder, 60)
+
+                # Format the string to display as H:M:S
+                duration_str = f"{int(hours)}:{int(minutes):02}:{int(seconds):02}"  # format as H:M:S with leading zeros for M and S
+
+                # Update the labels
                 self.audio_count.config(text=f"Audio Count: {self.count}")
-                self.total_aud_duration.config(text=f"Duration: {self.duration} minutes") 
+                self.total_aud_duration.config(text=f"Duration: {duration_str}")
+                #print("Successfully uploaded the audio file and metadata.")
+                # self.audio_count.config(text=f"Audio Count: {self.count}")
+                # self.total_aud_duration.config(text=f"Duration: {self.duration} minutes") 
             else:
                 print(f"Failed to upload the audio file. Status code: {response.status_code}, Response: {response.text}")
+                self.popup_message(f"Failed to upload the audio file. Status code: {response.status_code}, Response: {response.text}", 3000)
             if audio_duration is None:
                 self.popup_message('Error! No audio to save!!', destroy_duration= 2000)
             else:
@@ -793,30 +806,30 @@ class AudioRecorderApp:
         self.playback_frame = ttk.Frame(self.master)
         self.playback_frame.pack()
         if audio_file_name is not None:
-            print('audio file existss')
+            #print('audio file existss')
             self.audio_data = pyglet.media.load(audio_file_name, streaming = False)
             self.seg = AudioSegment.from_file(file= audio_file_name, format= 'wav')
             with wave.open(audio_file_name, 'rb') as wf:
                 num_frames = wf.getnframes()
-                print(num_frames)
+                #print(num_frames)
                 self.raw_data = wf.readframes(num_frames)
-                print(type(self.raw_data))
+                #print(type(self.raw_data))
                 self.np_data = np.frombuffer(self.raw_data, dtype=np.int16) 
         else:
             self.raw_data = b''.join(self.audio_recorder.frames_48000)
             self.np_data = np.frombuffer(self.raw_data, dtype= np.int16)
-            print('no file, loading from the current recording frames')
-            print(len(self.np_data))
+            #print('no file, loading from the current recording frames')
+            #print(len(self.np_data))
             self.seg = self.audio_recorder._create_audio_segment(self.audio_recorder.frames_48000, rate= 48000)
             self.seg1 = self.seg + 8
-            print(self.seg)
+            #print(self.seg)
             self.seg1.export('temp.wav', format= 'wav') 
             self.seg.export('temp1.wav', format= 'wav') 
             self.audio_data = pyglet.media.load('temp.wav', streaming= False)
         self.player = pyglet.media.Player()
-        print('before loading audio', self.player.volume) # self.player.loop = True
+        #print('before loading audio', self.player.volume) # self.player.loop = True
         self.player.queue(self.audio_data)
-        print('after loading audio: ',self.player.volume)
+        #print('after loading audio: ',self.player.volume)
         self.player.on_eos = self.player.pause()
         #self.player.loop = True
         # self.player.loop = True
@@ -837,7 +850,7 @@ class AudioRecorderApp:
 
         # Calculate the length of the scale widget to match the width of the x-axis
         scale_length = int(x_axis_width)
-        print('scale_length: ', scale_length)
+        #print('scale_length: ', scale_length)
         #seekbar
         self.seek_bar = ttk.Scale(
             self.playback_frame, from_=0, to=self.audio_duration, orient="horizontal", length=scale_length, command=self.update_time_label)
@@ -881,7 +894,7 @@ class AudioRecorderApp:
     def pause_audio(self):
 
         if self.player.playing:
-            print('audio is playin')
+            #print('audio is playin')
             self.player.pause()
             self.paused = True
             # self.start = True
@@ -889,26 +902,26 @@ class AudioRecorderApp:
             self.paused_position = self.seek_bar.get()
             self.seek_bar.set(self.paused_position)
             self.current_time = self.paused_position
-            print('audio paused at', self.current_time)
+            #print('audio paused at', self.current_time)
             self.pause_button.config(state=tk.DISABLED)
             self.resume_button.config(state=tk.NORMAL)
         else:
-            print('no audio is playin')
+            #print('no audio is playin')
             self.popup_message('No audio playing to pause..', destroy_duration= 1000)
 
     def resume_audio(self):
 
         if self.paused:
-            print('Entering the resuming state')
+            #print('Entering the resuming state')
             self.resumed = True
             self.paused = False
             self.current_time = self.paused_position
-            print('resumed at: ', self.current_time)
-            print('source: ', self.player.source)
+            #print('resumed at: ', self.current_time)
+            #print('source: ', self.player.source)
             self.player.seek(float(self.current_time))
             self.player.play()
             
-            #print('audio resumed at', self.current_time)
+            ##print('audio resumed at', self.current_time)
             self.resume_button.config(state=tk.DISABLED)
             self.pause_button.config(state=tk.NORMAL)
 
@@ -931,7 +944,7 @@ class AudioRecorderApp:
         self.resumed = False
         position_seconds = float(event.widget.get())
         self.seek_bar.set(position_seconds)
-        print('Position in seconds:', position_seconds)
+        #print('Position in seconds:', position_seconds)
         self.player.seek(position_seconds)
         self.player.play()
         self.current_time = position_seconds
@@ -951,7 +964,7 @@ class AudioRecorderApp:
         elif self.resumed and not self.paused:
             if self.current_time < self.audio_duration:
                 self.current_time += 0.1
-                print('new current time: ',self.current_time)
+                #print('new current time: ',self.current_time)
                 self.seek_bar.set(self.current_time)
                 self.current_time= self.seek_bar.get()
             else:
@@ -960,7 +973,7 @@ class AudioRecorderApp:
         elif self.seek:
             if self.current_time < self.audio_duration:
                 self.current_time += 0.1
-                print('new current time: ',self.current_time)
+                #print('new current time: ',self.current_time)
                 self.seek_bar.set(self.current_time)
                 self.current_time = self.seek_bar.get()
             else:
@@ -974,9 +987,9 @@ class AudioRecorderApp:
 
     def plot_waveform(self):
         # pass
-        print(self.seg.dBFS)
+        #print(self.seg.dBFS)
         dbfs_frames = [frame.dBFS for frame in self.seg]
-        print(len(self.np_data))
+        #print(len(self.np_data))
         time_in_sec = np.linspace(0, self.audio_duration, len(self.np_data))
 
         font1 = {'family':'sans serif','color':'#0D2740','size':10, 'weight' : 'bold'}
@@ -1012,7 +1025,7 @@ def main():
     
 if __name__ == "__main__":
     main()
-
+    cProfile.run('main()')
 # pyinstaller --onefile -w --add-data "static_files;static_files" recording-app.py
 
 

@@ -4,6 +4,8 @@ recording-app copy.py
 dist
 data
 PyAudio-recorder - Copy/
-recording-app copy 2.py/
+recording-app copy 2.py
 PyAudio-recorder/
 build/
+old_files/
+rec-app-copies/
