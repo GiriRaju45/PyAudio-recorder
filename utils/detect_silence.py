@@ -1,6 +1,6 @@
 from pydub import AudioSegment
 
-def detect_leading_silence(sound, silence_threshold=-60.0, chunk_size=1):
+def detect_leading_silence(sound, silence_threshold=-50.0, chunk_size=1):
     '''
     sound is a pydub.AudioSegment
     silence_threshold in dBFS
