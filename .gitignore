@@ -9,3 +9,5 @@ PyAudio-recorder/
 build/
 old_files/
 rec-app-copies/
+
+temp1.wav

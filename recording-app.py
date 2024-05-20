@@ -24,10 +24,12 @@ from PIL import Image, ImageTk
 #import multiprocessing
 import pyglet
 import wave
-
+import pyinstrument
+from memory_profiler import profile
 
 
 from utils.detect_silence import trim_silence  
+from utils.manual_trim import trim_audio
 
 base_dir = 'data'
 my_styles = ["Select Style", "FEAR","PROPER NOUN","Happy","HAPPY","Sad","SAD","Disgust","DISGUST","BOOK","BB","WIKI","Surprise","SURPRISE","DIGI","ALEXA","NEWS","Anger","ANGER","INDIC","SANGRAH","CONV","UMANG"]
@@ -154,7 +156,7 @@ class CustomProgressBar(ttk.Frame):
 
         
         self.progress = ttk.Progressbar(self, orient="horizontal", length=1200, mode="determinate", maximum= 50)
-        self.progress.pack(side= 'bottom', expand=False, ipady=35)
+        self.progress.pack(side= 'bottom', expand=False, ipady=25)
 
         db_style = ttk.Style()
         #db_style.theme_use('default')
@@ -203,6 +205,7 @@ class AudioRecorderApp:
         self.playback_frame = None
         self.flag = 1
         self.save_aud = False
+        self.trimmed_audio = None
         
       #  self.master.after(100, self.update_db_level())
 
@@ -317,14 +320,14 @@ class AudioRecorderApp:
         self.text_sentence.focus_set()
         #self.text_sentence.focus_get
     def root_focus(self, event = None):
-        self.main_frame.focus_set()
+        self.master.focus_set()
         
     def open_directory(self):
         try:
             if os.name == 'nt':  # For Windows
                 os.startfile(self.audio_recorder.audio_dir_48khz)
             elif os.name == 'posix':  # For Linux, macOS
-                subprocess.run(['open' if sys.platform == 'darwin' else 'xdg-open', path])
+                subprocess.run(['open' if sys.platform == 'darwin' else 'xdg-open', self.audio_recorder.audio_dir_48khz])
         except Exception as e:
             messagebox.showerror("Error", f"Failed to open the directory: {e}")
 
@@ -391,7 +394,7 @@ class AudioRecorderApp:
         self.text_id.pack(pady=(16, 0))  # Padding only at the top
 
         bold_font = ('Arial Unicode MS', 27, 'bold')  # Using 'Arial Unicode MS' for better Unicode character support
-        self.text_sentence = tk.Text(main_frame, height=5, width=60, wrap="word", font=bold_font, spacing1=10, spacing2=10, spacing3=10)
+        self.text_sentence = tk.Text(main_frame, height=3, width=60, wrap="word", font=bold_font, spacing1=10, spacing2=10, spacing3=10)
         self.text_sentence.tag_configure("center", justify='center')
         self.text_sentence.pack(pady=20, padx=10)  # Padding on sides for the Text widget
         self.text_sentence.insert("1.0", "Please use the load CSV option in the File menu to display the sentence.")
@@ -656,7 +659,21 @@ class AudioRecorderApp:
         sentence = self.text_sentence.get("1.0", "end-1c")
         filename = f"{id}.wav" 
 
-        audio_duration = self.audio_recorder.save_recording(filename, self.audio_dir)
+        if self.trimmed_audio is not None:
+            audio_duration = self.trimmed_audio.duration_seconds
+            self.audio_dir_48khz = os.path.join(self.audio_dir, '48khz')
+            self.audio_dir_8khz = os.path.join(self.audio_dir, '8khz')
+            os.makedirs(self.audio_dir_8khz, exist_ok= True)
+            os.makedirs(self.audio_dir_48khz, exist_ok=True)    
+
+            # trimmed_wav_48k, duration_48k = trim_silence(self.audio_segment_48000)
+            output_filename_48k = os.path.join(self.audio_dir_48khz, f"{filename}")
+            self.trimmed_audio.export(output_filename_48k, format='wav')
+            # trimmed_wav_8k, duration_8k = trim_silence(self.audio_recorder.audio_segment_8000)
+            # output_filename_8k = os.path.join(self.audio_dir_8khz, f"{filename}")
+            # trimmed_wav_8k.export(output_filename_8k, format = 'wav')
+        else:
+            audio_duration = self.audio_recorder.save_recording(filename, self.audio_dir)
         if audio_duration is None:
             self.popup_message('No audio to save..', 2000)
             return
@@ -676,12 +693,12 @@ class AudioRecorderApp:
         }
         
         files = {
-            'audio_file_48khz': (filename, open(file_path_48khz,'rb'), 'audio/wav'),
-            'audio_file_8khz': (filename, open(file_path_8khz,'rb'), 'audio/wav')
+            'audio_file_48khz': (filename, open(file_path_48khz,'rb'), 'audio/wav')
+            #'audio_file_8khz': (filename, open(file_path_8khz,'rb'), 'audio/wav')
         }
         response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
         files['audio_file_48khz'][1].close()
-        files['audio_file_8khz'][1].close()
+        #files['audio_file_8khz'][1].close()
         if response.ok:
             self.count += 1
             added_seconds = audio_duration / 1000
@@ -728,6 +745,16 @@ class AudioRecorderApp:
         Message(top, text=message, padx=20, pady=20).pack()
         top.after(destroy_duration, top.destroy)
 
+    def trim(self):
+
+        self.trimmed_audio = trim_audio('temp.wav', float(self.start_trim.get().strip()), float(self.end_trim.get().strip()))
+        self.trimmed_audio.export('trimmed.wav', format = 'wav')
+        self.playback_seekbar('trimmed.wav')
+        return self.trimmed_audio
+
+    # def save_trim_aud(self):
+
+
     def playback_seekbar(self, audio_file_name  = None): 
 
         #seekbar intializations
@@ -739,7 +766,10 @@ class AudioRecorderApp:
         if audio_file_name is not None:
             #print('audio file existss')
             self.audio_data = pyglet.media.load(audio_file_name, streaming = False)
-            self.seg = AudioSegment.from_file(file= audio_file_name, format= 'wav')
+            if self.trimmed_audio is not None:
+                self.seg = self.trimmed_audio
+            else:
+                self.seg = AudioSegment.from_file(file= audio_file_name, format= 'wav')
             with wave.open(audio_file_name, 'rb') as wf:
                 num_frames = wf.getnframes()
                 #print(num_frames)
@@ -782,7 +812,7 @@ class AudioRecorderApp:
         #seekbar
         self.seek_bar = ttk.Scale(
             self.playback_frame, from_=0, to=self.audio_duration, orient="horizontal", length=scale_length, command=self.update_time_label)
-        self.seek_bar.pack(pady=(15,0), padx = (100,0))
+        self.seek_bar.pack(pady=(10,0), padx = (100,0))
         self.seek_bar.bind("<B1-Motion>", self.pause_audio)
         self.seek_bar.bind("<ButtonRelease-1>", self.seek_to_position)
 
@@ -795,8 +825,17 @@ class AudioRecorderApp:
         self.pause_button = ttk.Button(self.playback_frame, text="Pause", command=self.pause_audio)
         self.stop_button = ttk.Button(self.playback_frame, text="Stop", command=self.stop_audio)
         self.resume_button = ttk.Button(self.playback_frame, text = "Resume", command = self.resume_audio)
+        self.start_trim = ttk.Entry(self.playback_frame, width= 6)
+        self.start_trim.insert(0,'start trim')
+        self.end_trim = ttk.Entry(self.playback_frame, width = 6)
+        self.end_trim.insert(0, 'end trim')
+        self.trim_btn = ttk.Button(self.playback_frame, text= 'trim audio', command= self.trim)
+        self.save_trim_btn = ttk.Button(self.playback_frame, text = 'Save trimmed audio', )
 
-        self.play_button.pack(side=tk.LEFT, padx= (900, 10))
+        self.start_trim.pack(side = tk.LEFT,padx=(400, 10))
+        self.end_trim.pack(padx = 10, side= tk.LEFT)
+        self.trim_btn.pack(side = tk.LEFT, padx = 10)
+        self.play_button.pack(side=tk.LEFT, padx= 10)
         self.pause_button.pack(side=tk.LEFT, padx= 10)
         self.resume_button.pack(side=tk.LEFT, padx = 10)
         self.stop_button.pack(side=tk.LEFT, padx= 10)
@@ -923,7 +962,7 @@ class AudioRecorderApp:
         font1 = {'family':'sans serif','color':'#0D2740','size':10, 'weight' : 'bold'}
         if hasattr(self, 'canvas2'):
             self.canvas2.get_tk_widget().destroy()
-        self.fig2 = plt.figure(figsize=(14,3))
+        self.fig2 = plt.figure(figsize=(14,2))
         self.axes = plt.axes()
         # plt.figure(figsize=(8, 2))
         self.axes.set_xlim(0, right= self.audio_duration)
@@ -937,19 +976,28 @@ class AudioRecorderApp:
 
         self.canvas2 = FigureCanvasTkAgg(self.fig2, master=self.playback_frame)
         self.canvas2.draw()
-        self.canvas2.get_tk_widget().pack(pady=(10,0), padx = (0,0))
+        self.canvas2.get_tk_widget().pack(pady=(5,0), padx = (0,0))
 
+    def on_closing(self):
+        self.master.destroy()
+        sys.exit()
 #################################################################################
+@profile
 def main():
     root = ttkb.Window(themename='flatly') # Main/Parent Window - Offers access to geometric configuration of widgets.
     root.state('zoomed')
     app = AudioRecorderApp(root)
     root.bind('<Key-asterisk>', lambda event: app.start_recording())
     root.bind('<space>', lambda event: app.stop_recording_or_playing(event))
+    root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop() # infinite loop, waits for an event to occur and process the event until window closed.
-    
+    #root.protocol("WM_DELETE_WINDOW", app.on_closing)
 if __name__ == "__main__":
+    #cProfile.run('main()', filename= 'profiling.prof')
+    # profiler = pyinstrument.Profiler()
+    # with profiler:
     main()
+# profiler.print_stats()
 
 # pyinstaller --onefile -w --add-data "static_files;static_files" recording-app-light-v0.py
 # pyinstaller --onefile -w --add-data "static_files;static_files" recording-app.py
