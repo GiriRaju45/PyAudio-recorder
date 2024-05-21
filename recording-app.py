@@ -660,7 +660,7 @@ class AudioRecorderApp:
         filename = f"{id}.wav" 
 
         if self.trimmed_audio is not None:
-            audio_duration = self.trimmed_audio.duration_seconds
+            audio_duration = self.trimmed_audio.duration_seconds*1000 #converting seconds to milli-seconds
             self.audio_dir_48khz = os.path.join(self.audio_dir, '48khz')
             self.audio_dir_8khz = os.path.join(self.audio_dir, '8khz')
             os.makedirs(self.audio_dir_8khz, exist_ok= True)
@@ -699,11 +699,15 @@ class AudioRecorderApp:
         response = requests.post('http://tts-dc-prod.centralindia.cloudapp.azure.com:8094/audio_upload', files=files,data=data)
         files['audio_file_48khz'][1].close()
         #files['audio_file_8khz'][1].close()
+        print(audio_duration)
         if response.ok:
             self.count += 1
+            print(audio_duration)
             added_seconds = audio_duration / 1000
             self.duration += added_seconds
+            print('added_seconds: ', added_seconds)
             print("Successfully uploaded the audio file and metadata.")
+            print('durations: ', self.duration)
             # Calculate hours, minutes, and seconds
             hours, remainder = divmod(self.duration, 3600)
             minutes, seconds = divmod(remainder, 60)
