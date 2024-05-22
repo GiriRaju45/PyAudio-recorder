@@ -724,6 +724,7 @@ class AudioRecorderApp:
             self.popup_message('Error! No audio to save!!', destroy_duration= 2000)
         else:
             self.next_sentence()
+            os.remove('trimmed.wav')
 
     def previous_sentence(self):
         if self.current_index > 0:
@@ -751,7 +752,10 @@ class AudioRecorderApp:
 
     def trim(self):
 
-        self.trimmed_audio = trim_audio('temp.wav', float(self.start_trim.get().strip()), float(self.end_trim.get().strip()))
+        if os.path.exists('trimmed.wav'):    
+            self.trimmed_audio =   trim_audio('trimmed.wav', float(self.start_trim.get().strip()), float(self.end_trim.get().strip()))
+        else:
+            self.trimmed_audio = trim_audio('temp.wav', float(self.start_trim.get().strip()), float(self.end_trim.get().strip()))
         self.trimmed_audio.export('trimmed.wav', format = 'wav')
         self.playback_seekbar('trimmed.wav')
         return self.trimmed_audio
@@ -834,7 +838,7 @@ class AudioRecorderApp:
         self.end_trim = ttk.Entry(self.playback_frame, width = 6)
         self.end_trim.insert(0, 'end trim')
         self.trim_btn = ttk.Button(self.playback_frame, text= 'trim audio', command= self.trim)
-        self.save_trim_btn = ttk.Button(self.playback_frame, text = 'Save trimmed audio', )
+        # self.save_trim_btn = ttk.Button(self.playback_frame, text = 'Save trimmed audio', )
 
         self.start_trim.pack(side = tk.LEFT,padx=(400, 10))
         self.end_trim.pack(padx = 10, side= tk.LEFT)
