@@ -206,6 +206,8 @@ class AudioRecorderApp:
         self.flag = 1
         self.save_aud = False
         self.trimmed_audio = None
+        self.trimmed_audio_48k = None
+        self.trimmed_audio_8k = None
         
       #  self.master.after(100, self.update_db_level())
 
@@ -336,7 +338,32 @@ class AudioRecorderApp:
         open_dir_button = ttk.Button(self.master, text="Open Directory", command=lambda: self.open_directory)
         button_x_position = self.screen_width/2 + 500
         open_dir_button.place(x=button_x_position,y=150)
- 
+
+    def check_focus_and_act(self,event):
+            focused_widget = self.master.focus_get()
+            if focused_widget == self.text_id:
+                # print("Focus is on text_id widget")
+                # Handle left/right arrow key when focus is on text_id
+                pass
+            elif focused_widget == self.text_sentence:
+                # print("Focus is on text_sentence widget")
+                # Handle left/right arrow key when focus is on text_sentence
+                pass
+            else:
+                if event.keysym == 'Left':
+                    self.previous_sentence()
+                elif event.keysym == 'Right':
+                    self.next_sentence()
+
+    def default_copy(self, event, widget):
+        widget.event_generate('<<Copy>>')
+
+    def default_paste(self, event, widget):
+        widget.event_generate('<<Paste>>')
+
+    def default_undo(self, event, widget):
+        widget.event_generate('<<Undo>>')
+
     def create_widgets(self): 
               
         self.master.minsize(width=1536, height=480)  # Set the minimum size of the window
@@ -433,7 +460,7 @@ class AudioRecorderApp:
             button.image = img  
             return button
         
-          
+      
         
         self.toggle_window_btn = ttk.Button(self.master, text="Open Window2", command=self.toggle_secondary_window, style='NoBorder.TButton')
         #self.toggle_window_btn.pack(side='left', pady=(0, 50), padx= (20,0))
@@ -454,12 +481,20 @@ class AudioRecorderApp:
         self.master.bind("<Control-s>", lambda event: self.save_audio())
         self.master.bind("<Control-n>", lambda event: self.next_sentence())
         self.master.bind("<Control-p>", lambda event: self.play_audio_file())
-        self.master.bind("<Left>", lambda event: self.previous_sentence())
-        self.master.bind("<Right>", lambda event: self.next_sentence())
-        #self.text_sentence.bind('<Button-1>', self.remove_focus)
         self.master.bind('<Button-2>', self.root_focus)
+        self.master.bind("<Left>", lambda event: self.check_focus_and_act(event))
+        self.master.bind("<Right>", lambda event: self.check_focus_and_act(event))
 
-        #Frame for db_progressbar:
+        self.text_id.bind('<Control-c>', lambda event: self.default_copy(event, self.text_id))
+        self.text_id.bind('<Control-v>', lambda event: self.default_paste(event, self.text_id))
+        self.text_id.bind('<Control-z>', lambda event: self.default_undo(event, self.text_id))
+
+        self.text_sentence.bind('<Control-c>', lambda event: self.default_copy(event, self.text_sentence))
+        self.text_sentence.bind('<Control-v>', lambda event: self.default_paste(event, self.text_sentence))
+        self.text_sentence.bind('<Control-z>', lambda event: self.default_undo(event, self.text_sentence))
+    
+
+
     def rec_indication(self, image_path):
         try:
             base_path = sys._MEIPASS
@@ -582,7 +617,7 @@ class AudioRecorderApp:
         filename = os.path.join(self.audio_dir, '48khz',f"{id}.wav")
         if os.path.exists(filename):
             self.popup_message('Loading Audio', 1000) 
-            self.playback_seekbar(audio_file_name= filename)  
+            self.playback_seekbar(audio_file_name= filename, audio_file_name_8k= filename.replace('48khz', '8khz'))  
         elif self.audio_recorder.frames_48000 != []:
             self.playback_seekbar()
         else:
@@ -659,7 +694,7 @@ class AudioRecorderApp:
         sentence = self.text_sentence.get("1.0", "end-1c")
         filename = f"{id}.wav" 
 
-        if self.trimmed_audio is not None:
+        if (self.trimmed_audio is not None) and (self.trimmed_audio_8k is not None):
             audio_duration = self.trimmed_audio.duration_seconds*1000 #converting seconds to milli-seconds
             self.audio_dir_48khz = os.path.join(self.audio_dir, '48khz')
             self.audio_dir_8khz = os.path.join(self.audio_dir, '8khz')
@@ -670,8 +705,8 @@ class AudioRecorderApp:
             output_filename_48k = os.path.join(self.audio_dir_48khz, f"{filename}")
             self.trimmed_audio.export(output_filename_48k, format='wav')
             # trimmed_wav_8k, duration_8k = trim_silence(self.audio_recorder.audio_segment_8000)
-            # output_filename_8k = os.path.join(self.audio_dir_8khz, f"{filename}")
-            # trimmed_wav_8k.export(output_filename_8k, format = 'wav')
+            output_filename_8k = os.path.join(self.audio_dir_8khz, f"{filename}")
+            self.trimmed_audio_8k.export(output_filename_8k, format = 'wav')
         else:
             audio_duration = self.audio_recorder.save_recording(filename, self.audio_dir)
         if audio_duration is None:
@@ -724,7 +759,8 @@ class AudioRecorderApp:
             self.popup_message('Error! No audio to save!!', destroy_duration= 2000)
         else:
             self.next_sentence()
-            os.remove('trimmed.wav')
+            if os.path.exists('trimmed.wav'):
+                os.remove('trimmed.wav')
 
     def previous_sentence(self):
         if self.current_index > 0:
@@ -752,18 +788,28 @@ class AudioRecorderApp:
 
     def trim(self):
 
-        if os.path.exists('trimmed.wav'):    
-            self.trimmed_audio =   trim_audio('trimmed.wav', float(self.start_trim.get().strip()), float(self.end_trim.get().strip()))
+        if os.path.exists('trimmed.wav') and os.path.exists('trimmed_8k.wav'):    
+            self.trimmed_audio =  trim_audio('trimmed.wav', float(self.start_trim.get().strip()), float(self.end_trim.get().strip()))
+            self.trimmed_audio_8k = trim_audio('trimmed_8k.wav', float(self.start_trim.get().strip()), float(self.end_trim.get().strip()))
         else:
-            self.trimmed_audio = trim_audio('temp.wav', float(self.start_trim.get().strip()), float(self.end_trim.get().strip()))
+            self.trimmed_audio = trim_audio('temp1.wav', float(self.start_trim.get().strip()), float(self.end_trim.get().strip()))
+            self.trimmed_audio_8k= trim_audio('temp_8k.wav', float(self.start_trim.get().strip()), float(self.end_trim.get().strip()))
         self.trimmed_audio.export('trimmed.wav', format = 'wav')
-        self.playback_seekbar('trimmed.wav')
-        return self.trimmed_audio
+        self.trimmed_audio_8k.export('trimmed_8k.wav', format = 'wav')
+        self.playback_seekbar('trimmed.wav', 'trimmed_8k.wav')
+        # return self.trimmed_audio
 
-    # def save_trim_aud(self):
+    def untrim(self):
+
+        if os.path.exists('trimmed.wav') and os.path.exists('trimmed_8k.wav'):
+            self.trimmed_audio = None
+            self.trimmed_audio_8k = None
+            os.remove('trimmed.wav')
+            os.remove('trimmed_8k.wav')
+            self.playback_seekbar('temp.wav', 'temp_8k.wav')
 
 
-    def playback_seekbar(self, audio_file_name  = None): 
+    def playback_seekbar(self, audio_file_name  = None, audio_file_name_8k = None): 
 
         #seekbar intializations
         if hasattr(self, 'playback_frame') and self.playback_frame is not None:
@@ -774,8 +820,10 @@ class AudioRecorderApp:
         if audio_file_name is not None:
             #print('audio file existss')
             self.audio_data = pyglet.media.load(audio_file_name, streaming = False)
-            if self.trimmed_audio is not None:
+            self.audio_data_8k = pyglet.media.load(audio_file_name_8k, streaming = False)
+            if self.trimmed_audio is not None and self.trimmed_audio_8k is not None:
                 self.seg = self.trimmed_audio
+                self.seg_8k = self.trimmed_audio_8k
             else:
                 self.seg = AudioSegment.from_file(file= audio_file_name, format= 'wav')
             with wave.open(audio_file_name, 'rb') as wf:
@@ -791,10 +839,12 @@ class AudioRecorderApp:
             #print(len(self.np_data))
             self.seg = self.audio_recorder._create_audio_segment(self.audio_recorder.frames_48000, rate= 48000)
             self.seg1 = self.seg + 8
+            self.seg_8k = self.audio_recorder._create_audio_segment(self.audio_recorder.frames_8000, rate = 8000)
             #print(self.seg)
+            self.seg_8k.export('temp_8k.wav', format = 'wav')
             self.seg1.export('temp.wav', format= 'wav') 
             self.seg.export('temp1.wav', format= 'wav') 
-            self.audio_data = pyglet.media.load('temp.wav', streaming= False)
+            self.audio_data = pyglet.media.load('temp1.wav', streaming= False)
         self.player = pyglet.media.Player()
         #print('before loading audio', self.player.volume) # self.player.loop = True
         self.player.queue(self.audio_data)
@@ -839,10 +889,11 @@ class AudioRecorderApp:
         self.end_trim.insert(0, 'end trim')
         self.trim_btn = ttk.Button(self.playback_frame, text= 'trim audio', command= self.trim)
         # self.save_trim_btn = ttk.Button(self.playback_frame, text = 'Save trimmed audio', )
-
+        self.revert_trim = ttk.Button(self.playback_frame, text= 'revert trim', command= self.untrim)
         self.start_trim.pack(side = tk.LEFT,padx=(400, 10))
         self.end_trim.pack(padx = 10, side= tk.LEFT)
         self.trim_btn.pack(side = tk.LEFT, padx = 10)
+        self.revert_trim.pack(side = tk.LEFT, padx = 10)
         self.play_button.pack(side=tk.LEFT, padx= 10)
         self.pause_button.pack(side=tk.LEFT, padx= 10)
         self.resume_button.pack(side=tk.LEFT, padx = 10)
@@ -851,7 +902,36 @@ class AudioRecorderApp:
 
         self.playback_frame.after(100, self.update_seek_bar)
         
+    def  on_entry(self, event):
+        return 'break'
+    
+    def on_focus_in(self, event):
+        widget = event.widget
+        print(widget)
+        widget.bind('<Left>', self.on_entry)
+        widget.bind('<Right>', self.on_entry)
 
+
+    def on_focus_out(self, event):
+        widget = event.widget
+        # print(widget)
+        widget.unbind('<Left>')
+        widget.unbind('<Right>')
+
+    def on_focus_out_text_id(self):
+        # widget = event.widget
+        # print(widget)
+        self.text_id.unbind('<Left>')
+        self.text_id.unbind('<Right>')
+        
+    def on_focus_in_text_id(self):
+        self.text_id.bind('<Left>', self.on_entry)
+        self.text_id.bind('<Right>', self.on_entry)
+
+    def on_focus_in_text_sentence(self):
+        self.text_sentence.bind('<Left>', self.on_entry)
+        self.text_sentence.bind('<Right>', self.on_entry)
+        
     def update_time_label(self, value):
         self.current_time = int(float(value))
         self.time_label.config(text="{} / {}".format(self.format_time(self.current_time), self.format_time(self.audio_duration)))
