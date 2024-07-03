@@ -759,8 +759,11 @@ class AudioRecorderApp:
             self.popup_message('Error! No audio to save!!', destroy_duration= 2000)
         else:
             self.next_sentence()
-            if os.path.exists('trimmed.wav'):
+            if os.path.exists('trimmed.wav') and os.path.exists('trimmed_8k.wav'):
                 os.remove('trimmed.wav')
+                os.remove('trimmed_8k.wav')
+                self.trimmed_audio = None
+                self.trimmed_audio_8k = None
 
     def previous_sentence(self):
         if self.current_index > 0:

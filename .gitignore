@@ -9,5 +9,9 @@ PyAudio-recorder/
 build/
 old_files/
 rec-app-copies/
-
+temp_8k.wav
 temp1.wav
+temp.wav
+trimmed.wav
+trimmed_48k.wav
+trimmed_8k.wav
