@@ -337,7 +337,7 @@ class AudioRecorderApp:
         # Create a button to open the directory
         open_dir_button = ttk.Button(self.master, text="Open Directory", command=lambda: self.open_directory)
         button_x_position = self.screen_width/2 + 500
-        open_dir_button.place(x=button_x_position,y=150)
+        open_dir_button.place(x=button_x_position,y=150, anchor= 'NSEW')
 
     def check_focus_and_act(self,event):
             focused_widget = self.master.focus_get()
@@ -477,7 +477,7 @@ class AudioRecorderApp:
         self.btn_record.pack(side=tk.LEFT, padx=32,pady = 2)
         self.btn_stop.pack(side=tk.LEFT, padx=32,pady = 2)
         self.btn_save.pack(side=tk.LEFT, padx=32,pady = 2)
-        self.btn_next.pack(side=tk.LEFT, padx=32,pady = 2)
+        self.btn_next.pack(side=tk.LEFT, padx=32,pady = 2, expand= True)
         self.master.bind("<Control-s>", lambda event: self.save_audio())
         self.master.bind("<Control-n>", lambda event: self.next_sentence())
         self.master.bind("<Control-p>", lambda event: self.play_audio_file())
@@ -900,7 +900,7 @@ class AudioRecorderApp:
         self.play_button.pack(side=tk.LEFT, padx= (600,10))
         self.pause_button.pack(side=tk.LEFT, padx= 10)
         self.resume_button.pack(side=tk.LEFT, padx = 10)
-        self.stop_button.pack(side=tk.LEFT, padx= 10)
+        self.stop_button.pack(side=tk.LEFT, padx= 10, sticky = 'NSEW')
     
 
         self.playback_frame.after(100, self.update_seek_bar)

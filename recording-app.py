@@ -16,6 +16,8 @@ import os
 import requests
 import threading
 import sys
+import io
+import pstats
 import cProfile
 from tkinter import messagebox
 from pydub import AudioSegment
@@ -49,7 +51,8 @@ class AudioRecorder:
         self.frames_48000 = []
         self.frames_8000 = []
         self.is_recording = False
-        self.stream = None
+        self.stream_48000 = None
+        self.stream_8000 = None
 
     def start_recording(self, device_index_48k=None, device_index_8k = None):
         self.stream_48000 = self.pyaudio_instance.open(
@@ -208,7 +211,7 @@ class AudioRecorderApp:
         self.trimmed_audio = None
         self.trimmed_audio_48k = None
         self.trimmed_audio_8k = None
-        
+        self.entry_undo_stack = []
       #  self.master.after(100, self.update_db_level())
 
     def setup_menu(self):
@@ -247,6 +250,7 @@ class AudioRecorderApp:
             
     def on_submit(self):
         self.make_directory()
+        self.root_focus()
         # self.create_gui() 
 
     def update_microphone_dropdown(self):
@@ -340,20 +344,30 @@ class AudioRecorderApp:
         open_dir_button.place(x=button_x_position,y=150)
 
     def check_focus_and_act(self,event):
+                       
             focused_widget = self.master.focus_get()
-            if focused_widget == self.text_id:
-                # print("Focus is on text_id widget")
-                # Handle left/right arrow key when focus is on text_id
-                pass
-            elif focused_widget == self.text_sentence:
-                # print("Focus is on text_sentence widget")
-                # Handle left/right arrow key when focus is on text_sentence
-                pass
+            # print(focused_widget)
+
+            if isinstance(focused_widget,tk.Text) or isinstance(focused_widget,tk.Entry)  or isinstance(focused_widget, tk.OptionMenu):
+                # print(focused_widget)
+                if (event.state & 0x4) and event.keysym == 'c':  # Control-c
+                    # print(focused_widget)
+                    self.default_copy(event, focused_widget)
+                elif (event.state & 0x4) and event.keysym == 'v':  # Control-v
+                    self.default_paste(event, focused_widget)
+                elif (event.state & 0x4) and event.keysym == 'z':  # Control-z
+                    print(focused_widget)
+                    self.default_undo(event, focused_widget)
             else:
                 if event.keysym == 'Left':
                     self.previous_sentence()
                 elif event.keysym == 'Right':
                     self.next_sentence()
+                elif event.keysym == 'asterisk':
+                    self.start_recording()
+                elif event.keysym == 'space':
+                    self.stop_recording_or_playing()
+
 
     def default_copy(self, event, widget):
         widget.event_generate('<<Copy>>')
@@ -361,8 +375,19 @@ class AudioRecorderApp:
     def default_paste(self, event, widget):
         widget.event_generate('<<Paste>>')
 
+    
+
     def default_undo(self, event, widget):
-        widget.event_generate('<<Undo>>')
+        if isinstance(widget, tk.Text):
+            widget.edit_undo()
+
+        elif isinstance(widget, tk.Entry):
+            if self.entry_undo_stack:
+                print(self.entry_undo_stack)
+                last_state = self.entry_undo_stack.pop()
+                widget.delete(0, tk.END)
+                widget.insert(0, last_state)
+            # print(self.entry_undo_stack)
 
     def create_widgets(self): 
               
@@ -404,7 +429,7 @@ class AudioRecorderApp:
         self.update_microphone_dropdown()
 
         # Add a submit button
-        self.submit_btn = tk.Button(drop_frame, text="Submit", command=self.on_submit)
+        self.submit_btn = tk.Button(drop_frame, text="Submit", command=self.on_submit) 
         self.submit_btn.pack(pady=(40, 0), padx = 10, side = tk.LEFT)
 
         main_frame = ttk.Frame(self.master)
@@ -421,7 +446,7 @@ class AudioRecorderApp:
         self.text_id.pack(pady=(16, 0))  # Padding only at the top
 
         bold_font = ('Arial Unicode MS', 27, 'bold')  # Using 'Arial Unicode MS' for better Unicode character support
-        self.text_sentence = tk.Text(main_frame, height=3, width=60, wrap="word", font=bold_font, spacing1=10, spacing2=10, spacing3=10)
+        self.text_sentence = tk.Text(main_frame, height=3, width=60, wrap="word", font=bold_font, spacing1=10, spacing2=10, spacing3=10, undo=True, )
         self.text_sentence.tag_configure("center", justify='center')
         self.text_sentence.pack(pady=20, padx=10)  # Padding on sides for the Text widget
         self.text_sentence.insert("1.0", "Please use the load CSV option in the File menu to display the sentence.")
@@ -465,35 +490,45 @@ class AudioRecorderApp:
         self.toggle_window_btn = ttk.Button(self.master, text="Open Window2", command=self.toggle_secondary_window, style='NoBorder.TButton')
         #self.toggle_window_btn.pack(side='left', pady=(0, 50), padx= (20,0))
         self.toggle_window_btn.place(x = 20, y=150)
-        self.btn_play = create_button_with_image(buttons_frame, resource_path('static_files/icons8-play-button-100.png'), self.play_audio_file, style='NoBorder.TButton')
-        self.btn_stop = create_button_with_image(buttons_frame, resource_path('static_files/icons8-stop-100.png'), self.stop_recording_or_playing, style='NoBorder.TButton')
-        self.btn_record = create_button_with_image(buttons_frame, resource_path('static_files/icons8-microphone-100.png'), self.start_recording, style='NoBorder.TButton')
-        self.btn_save = create_button_with_image(buttons_frame, resource_path('static_files/icons8-save-button-100.png'), self.save_audio, style='NoBorder.TButton')
-        self.btn_previous = create_button_with_image(buttons_frame, resource_path('static_files/icons8-previous-96-2.png'), self.previous_sentence, style='NoBorder.TButton')
-        self.btn_next = create_button_with_image(buttons_frame, resource_path('static_files/icons8-last-100.png'), self.next_sentence, style='NoBorder.TButton')
-       
-        self.btn_previous.pack(side=tk.LEFT, padx=32,pady = 2)
-        self.btn_play.pack(side=tk.LEFT, padx=32,pady = 2)
-        self.btn_record.pack(side=tk.LEFT, padx=32,pady = 2)
-        self.btn_stop.pack(side=tk.LEFT, padx=32,pady = 2)
-        self.btn_save.pack(side=tk.LEFT, padx=32,pady = 2)
-        self.btn_next.pack(side=tk.LEFT, padx=32,pady = 2)
-        self.master.bind("<Control-s>", lambda event: self.save_audio())
-        self.master.bind("<Control-n>", lambda event: self.next_sentence())
-        self.master.bind("<Control-p>", lambda event: self.play_audio_file())
-        self.master.bind('<Button-2>', self.root_focus)
-        self.master.bind("<Left>", lambda event: self.check_focus_and_act(event))
-        self.master.bind("<Right>", lambda event: self.check_focus_and_act(event))
+        if self.master is not None:
+            self.btn_play = create_button_with_image(buttons_frame, resource_path('static_files/icons8-play-button-100.png'), self.play_audio_file, style='NoBorder.TButton')
+            self.btn_stop = create_button_with_image(buttons_frame, resource_path('static_files/icons8-stop-100.png'), self.stop_recording_or_playing, style='NoBorder.TButton')
+            self.btn_record = create_button_with_image(buttons_frame, resource_path('static_files/icons8-microphone-100.png'), self.start_recording, style='NoBorder.TButton')
+            self.btn_save = create_button_with_image(buttons_frame, resource_path('static_files/icons8-save-button-100.png'), self.save_audio, style='NoBorder.TButton')
+            self.btn_previous = create_button_with_image(buttons_frame, resource_path('static_files/icons8-previous-96-2.png'), self.previous_sentence, style='NoBorder.TButton')
+            self.btn_next = create_button_with_image(buttons_frame, resource_path('static_files/icons8-last-100.png'), self.next_sentence, style='NoBorder.TButton')
+        
+            self.btn_previous.pack(side=tk.LEFT, padx=32,pady = 2)
+            self.btn_play.pack(side=tk.LEFT, padx=32,pady = 2)
+            self.btn_record.pack(side=tk.LEFT, padx=32,pady = 2)
+            self.btn_stop.pack(side=tk.LEFT, padx=32,pady = 2)
+            self.btn_save.pack(side=tk.LEFT, padx=32,pady = 2)
+            self.btn_next.pack(side=tk.LEFT, padx=32,pady = 2)
+            self.master.bind("<Control-s>", lambda event: self.save_audio())
+            self.master.bind("<Control-n>", lambda event: self.next_sentence())
+            self.master.bind("<Control-p>", lambda event: self.play_audio_file())
+            self.master.bind('<Button-2>', self.root_focus)
+            self.master.bind("<Left>", lambda event: self.check_focus_and_act(event))
+            self.master.bind("<Right>", lambda event: self.check_focus_and_act(event))
+            
+            self.master.bind('<space>', lambda event: self.check_focus_and_act(event))
+            self.master.bind('<Key-asterisk>', lambda event: self.check_focus_and_act(event))
 
-        self.text_id.bind('<Control-c>', lambda event: self.default_copy(event, self.text_id))
-        self.text_id.bind('<Control-v>', lambda event: self.default_paste(event, self.text_id))
-        self.text_id.bind('<Control-z>', lambda event: self.default_undo(event, self.text_id))
+            self.text_id.bind('<Control-c>', lambda event: self.check_focus_and_act(event))
+            self.text_id.bind('<Control-v>', lambda event: self.check_focus_and_act(event))
+            self.text_id.bind('<Control-z>', lambda event: self.check_focus_and_act(event))
 
-        self.text_sentence.bind('<Control-c>', lambda event: self.default_copy(event, self.text_sentence))
-        self.text_sentence.bind('<Control-v>', lambda event: self.default_paste(event, self.text_sentence))
-        self.text_sentence.bind('<Control-z>', lambda event: self.default_undo(event, self.text_sentence))
-    
-
+            self.text_sentence.bind('<Control-c>', lambda event: self.check_focus_and_act(event))
+            self.text_sentence.bind('<Control-v>', lambda event: self.check_focus_and_act(event))
+            self.text_sentence.bind('<Control-z>', lambda event: self.check_focus_and_act(event))
+            self.text_sentence.bind("<KeyRelease>", self.update_entry_undo_stack)
+            self.master.bind("<Key>", self.check_focus_and_act)
+        
+    def update_entry_undo_stack(self, event):
+        current_text = self.text_id.get()
+        if not self.entry_undo_stack or self.entry_undo_stack[-1] != current_text:
+            self.entry_undo_stack.append(current_text)
+        print(self.entry_undo_stack)
 
     def rec_indication(self, image_path):
         try:
@@ -636,7 +671,12 @@ class AudioRecorderApp:
             self.popup_message('ERROR!! please select the style, language and speak to create the respective folder before starting to  record', destroy_duration= 4000)
         else:
             index_48k = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
-            index_8k = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
+            
+            if ':' not in self.microphone_dropdown_8k.get().split(' ')[1]:
+                index_8k = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
+            else:
+                index_8k = int(self.microphone_dropdown_8k.get().split(' ')[1].replace(':', ''))
+                
             self.popup_message('Recording started!!')
             self.audio_recorder.start_recording(device_index_48k= index_48k, device_index_8k= index_8k)
             #print(self.audio_recorder.is_recording)
@@ -764,6 +804,12 @@ class AudioRecorderApp:
                 os.remove('trimmed_8k.wav')
                 self.trimmed_audio = None
                 self.trimmed_audio_8k = None
+                self.seg = None
+                self.seg_8k = None
+                self.raw_data = None
+                self.audio_recorder.stream_48000 = None
+                self.audio_recorder.stream_8000 = None
+        # self.print_variables()
 
     def previous_sentence(self):
         if self.current_index > 0:
@@ -841,11 +887,11 @@ class AudioRecorderApp:
             #print('no file, loading from the current recording frames')
             #print(len(self.np_data))
             self.seg = self.audio_recorder._create_audio_segment(self.audio_recorder.frames_48000, rate= 48000)
-            self.seg1 = self.seg + 8
+            # self.seg1 = self.seg + 8
             self.seg_8k = self.audio_recorder._create_audio_segment(self.audio_recorder.frames_8000, rate = 8000)
             #print(self.seg)
             self.seg_8k.export('temp_8k.wav', format = 'wav')
-            self.seg1.export('temp.wav', format= 'wav') 
+            # self.seg1.export('temp.wav', format= 'wav') 
             self.seg.export('temp1.wav', format= 'wav') 
             self.audio_data = pyglet.media.load('temp1.wav', streaming= False)
         self.player = pyglet.media.Player()
@@ -902,8 +948,8 @@ class AudioRecorderApp:
         self.resume_button.pack(side=tk.LEFT, padx = 10)
         self.stop_button.pack(side=tk.LEFT, padx= 10)
     
-
-        self.playback_frame.after(100, self.update_seek_bar)
+        if self.playback_frame is not None:
+            self.playback_frame.after(100, self.update_seek_bar)
         
     def  on_entry(self, event):
         return 'break'
@@ -1041,7 +1087,8 @@ class AudioRecorderApp:
             self.seek_bar.set(0.0)
             self.stop = False
 
-        self.playback_frame.after(100, self.update_seek_bar)
+        if self.playback_frame is not None:
+            self.playback_frame.after(100, self.update_seek_bar)
 
     def plot_waveform(self):
         # pass
@@ -1061,35 +1108,75 @@ class AudioRecorderApp:
         plt.plot(time_in_sec, self.np_data, color='#0D2740')
         plt.xlabel('Time (seconds)', fontdict= font1)
         plt.ylabel('Amplitude', fontdict= font1)
+        # print(time_in_sec)
+        major_ticks = np.arange(0, self.audio_duration, 1)  # Major ticks at whole numbers
+        minor_ticks = np.arange(0, self.audio_duration, 0.1)  # Minor ticks at decimal values
+        # middle_ticks = np.arange(0.5, self.audio_duration + 0.5, 1.0) # Middle ticks in the places of 0.5s 
+
+        # Set the custom ticks on the x-axis
+        plt.gca().set_xticks(major_ticks)
+        plt.gca().set_xticks(minor_ticks, minor=True)
+        # plt.gca().set_xticks(middle_ticks)
+
+        # Customize the appearance of major and minor ticks
+        plt.gca().tick_params(axis='x', which='major', length=12, width =2)  # Longer ticks for major ticks
+        plt.gca().tick_params(axis='x', which='minor', length=7, width = 1.5)   # Shorter ticks for minor ticks
+        # plt.gca().tick_params(axis= 'x', which = 'minor', length=7, width = 1.5)
+        # Optionally, add labels to the ticks
+        # plt.gca().set_xticklabels([f'{tick:.0f}' for tick in major_ticks], fontsize=12)
+        # plt.gca().set_xticklabels([f'{tick:.1f}' for tick in minor_ticks], minor=True, fontsize=8)
+
+
+# Show the plot
         #plt.title('Waveform') 
         plt.tight_layout()
         self.fig2.set_facecolor('#717b96')
+
+       
+
+        # Optionally, you can add labels to the ticks
+        # plt.gca().set_xticklabels([f'{tick:.1f}' for tick in x_ticks])
+
 
         self.canvas2 = FigureCanvasTkAgg(self.fig2, master=self.playback_frame)
         self.canvas2.draw()
         self.canvas2.get_tk_widget().pack(pady=(5,0), padx = (0,0))
 
     def on_closing(self):
+        if self.playback_frame is not None:
+            self.playback_frame.destroy()
         self.master.destroy()
+        # self.playback_frame.destroy()
         sys.exit()
+
+    def print_variables(self):
+
+        for name, value in vars(self).items():
+            print(f"{name}: {value}")
+
 #################################################################################
 @profile
 def main():
     root = ttkb.Window(themename='flatly') # Main/Parent Window - Offers access to geometric configuration of widgets.
     root.state('zoomed')
     app = AudioRecorderApp(root)
-    root.bind('<Key-asterisk>', lambda event: app.start_recording())
-    root.bind('<space>', lambda event: app.stop_recording_or_playing(event))
+    # root.bind('<Key-asterisk>', lambda event: app.start_recording())
+    # app.master.bind('<space>', lambda event: app.stop_recording_or_playing(event))
+    # app.master.bind('<Key-asterisk>', lambda event: app.start_recording(event))
+    # root.protocol("WM_DELETE_WINDOW", app.on_closing)
+    app.master.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
     root.mainloop() # infinite loop, waits for an event to occur and process the event until window closed.
-    #root.protocol("WM_DELETE_WINDOW", app.on_closing)
+    
 if __name__ == "__main__":
     #cProfile.run('main()', filename= 'profiling.prof')
     # profiler = pyinstrument.Profiler()
     # with profiler:
-    main()
-# profiler.print_stats()
+    cProfile.run('main()')
 
+# 
+
+    
 # pyinstaller --onefile -w --add-data "static_files;static_files" recording-app-light-v0.py
 # pyinstaller --onefile -w --add-data "static_files;static_files" recording-app.py
 
