@@ -249,6 +249,7 @@ class AudioRecorderApp:
             #self.master.after(2000, success_message.destroy)
             
     def on_submit(self):
+    
         self.make_directory()
         self.root_focus()
         # self.create_gui() 
@@ -670,22 +671,25 @@ class AudioRecorderApp:
         if self.audio_dir == '':
             self.popup_message('ERROR!! please select the style, language and speak to create the respective folder before starting to  record', destroy_duration= 4000)
         else:
-            index_48k = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
+            self.index_48k = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
             
-            if ':' not in self.microphone_dropdown_8k.get().split(' ')[1]:
-                index_8k = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
+            if not self.microphone_dropdown_8k.get().split(' ')[1].replace(':', '').isnumeric():
+                self.index_8k = int(self.microphone_dropdown.get().split(' ')[1].replace(':', ''))
             else:
-                index_8k = int(self.microphone_dropdown_8k.get().split(' ')[1].replace(':', ''))
-                
+                self.index_8k = int(self.microphone_dropdown_8k.get().split(' ')[1].replace(':', ''))
+
+            # if not str(self.index_48k).isnumeric() or not str(self.index_8k).isnumeric() == None:
+            #     self.popup_message('Please select the microphone.', destroy_duration= 2000)
+            #     exit()
+            self.audio_recorder.start_recording(device_index_48k= self.index_48k, device_index_8k= self.index_8k)
             self.popup_message('Recording started!!')
-            self.audio_recorder.start_recording(device_index_48k= index_48k, device_index_8k= index_8k)
             #print(self.audio_recorder.is_recording)
             self.db_stream =  self.db_pyaud_instance.open(format=pyaudio.paInt16,
                                 channels=1,
                                 rate=48000,
                                 input=True,
                                 frames_per_buffer=512,
-                                input_device_index= index_48k)
+                                input_device_index= self.index_48k)
             
             self.update_db_value = self.master.after(75, self.update_db_level)
 
