@@ -900,7 +900,7 @@ class AudioRecorderApp:
         self.play_button.pack(side=tk.LEFT, padx= (600,10))
         self.pause_button.pack(side=tk.LEFT, padx= 10)
         self.resume_button.pack(side=tk.LEFT, padx = 10)
-        self.stop_button.pack(side=tk.LEFT, padx= 10, sticky = 'NSEW')
+        self.stop_button.pack(side=tk.LEFT, padx= 10, ) # sticky = 'NSEW'
     
 
         self.playback_frame.after(100, self.update_seek_bar)
